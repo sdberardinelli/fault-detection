@@ -16,6 +16,8 @@
 #include <boost/thread.hpp>
 #include <cstdlib>
 #include <ctime>
+#include <algorithm>
+#include <valarray>
 
 /************************************
  * Namespaces 
@@ -38,6 +40,14 @@ Server::Server ( boost::asio::io_service & io, short port ) : _acceptor(io,
                                                                                                        port))
 {
     srand (time(NULL));
+    valarray<double> paramaters(3);
+    
+    paramaters[0] = 0;
+    paramaters[1] = 1;
+    paramaters[2] = 0;
+    
+    _dist.set_parameters(paramaters);
+    _dist.construct_distributions();
     
     _running = false;
     start_accept();
@@ -128,7 +138,7 @@ bool Server::is_running ( void )
 void Server::run ( void )
 {
     char in;
-    string _message, param1, param2;
+    string _message, param1, param2, _server_computation;
     stringstream ss;
     do 
     {  
@@ -187,6 +197,62 @@ void Server::run ( void )
                 break;
         }
         
+
+        /* send command */
+        for ( vector<int>::size_type i = 0; i != _connections.size(); i++ )
+        {
+            if ( _connections[i]->is_connected() )
+            {
+                _connections[i]->start_write(_message);
+                
+                if ( rand()/double(RAND_MAX) < _dist.uniform() )
+                {
+                    _connections[i]->set_checked(true);
+                    cout << "Checking";
+                    switch ( in )
+                    {
+                        case TestFunctions::DO_ADD:
+                        {
+                            int value = _tf.do_add(atoi(param1.c_str()),
+                                                   atoi(param2.c_str()));
+                            ss << value;
+                            _server_computation = ss.str();
+                        }
+                            break;
+                        case TestFunctions::DO_STR:
+                        {
+                            _server_computation = _tf.do_string_cat(param1, param2);
+                        }
+                            break;
+                        case TestFunctions::DO_MUL:
+                        {
+                            int value = _tf.do_multipy(atoi(param1.c_str()),
+                                                       atoi(param2.c_str()));
+                            ss << value;
+                            _server_computation = ss.str();
+                        }
+                            break;
+                        default:
+                            _message = in+"\n";
+                            break;
+                    }
+                    _connections[i]->set_server_computation(_server_computation);
+                }
+                else
+                {
+                    cout << "Not Checking" << endl;
+                    _connections[i]->set_checked(false);
+                }
+                
+            }
+            else
+            {
+                //swap(_connections[i], _connections.back());
+                //_connections.pop_back();
+                cout << "removing connection" << endl;
+            }
+        }
+        
         try
         {
             // Sleep and check for interrupt.
@@ -199,45 +265,25 @@ void Server::run ( void )
         {
             cout << "Thread is stopped" << endl;
             break;
-        }
+        }  
         
-        
-        /* send command */
         for ( vector<int>::size_type i = 0; i != _connections.size(); i++ )
         {
-            _connections[i]->start_write(_message);
-        }
-        
-        switch ( in )
-        {
-            case TestFunctions::DO_ADD:
+            if ( _connections[i]->is_checked() )
             {
-                int value = _tf.do_add(atoi(param1.c_str()),
-                                       atoi(param2.c_str()));
-                ss << value;
-                cout << ss.str() << endl;
+                if ( _connections[i]->get_server_computation().compare(_connections[i]->get_message()) == 0 )
+                {
+                    cout << " ... agree" << endl;
+                }
+                else
+                {
+                    cout << " ... disagree" << endl;
+                }
             }
-                break;
-            case TestFunctions::DO_STR:
-            {
-                cout << _tf.do_string_cat(param1, param2) << endl;
-            }
-                break;
-            case TestFunctions::DO_MUL:
-            {
-                int value = _tf.do_multipy(atoi(param1.c_str()),
-                                           atoi(param2.c_str()));
-                ss << value;
-                cout << ss.str() << endl;
-            }
-                break;
-            default:
-                _message = in+"\n";
-                break;
-        }     
+        }        
         
         param1 = "";
-        param2= "";
+        param2 = "";
         ss.str(string());
         
     }while ( in != 'q' || !_running );

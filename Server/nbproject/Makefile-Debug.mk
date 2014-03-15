@@ -36,6 +36,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/src/Connection.o \
+	${OBJECTDIR}/src/Distributions.o \
+	${OBJECTDIR}/src/Logger.o \
 	${OBJECTDIR}/src/Server.o \
 	${OBJECTDIR}/src/TestFunctions.o \
 	${OBJECTDIR}/src/main.o
@@ -69,6 +71,16 @@ ${OBJECTDIR}/src/Connection.o: src/Connection.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -g -Ihdr -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Connection.o src/Connection.cpp
+
+${OBJECTDIR}/src/Distributions.o: src/Distributions.cpp 
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -Ihdr -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Distributions.o src/Distributions.cpp
+
+${OBJECTDIR}/src/Logger.o: src/Logger.cpp 
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -Ihdr -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Logger.o src/Logger.cpp
 
 ${OBJECTDIR}/src/Server.o: src/Server.cpp 
 	${MKDIR} -p ${OBJECTDIR}/src

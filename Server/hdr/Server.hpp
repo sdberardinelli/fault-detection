@@ -18,6 +18,8 @@
 #include <vector>
 #include "Connection.hpp"
 #include "TestFunctions.hpp"
+#include "Distributions.hpp"
+#include "Logger.hpp"
 
 /*******************************************************************************
 *                                    DATATYPES
@@ -60,6 +62,8 @@ class Server
         std::vector<Connection::pointer>  _connections;
         boost::asio::ip::tcp::acceptor    _acceptor;
         TestFunctions::TestFunction       _tf;
+        Distributions::Distribution       _dist;
+        Logger                            _log;
 
 
         
