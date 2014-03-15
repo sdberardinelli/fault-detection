@@ -32,10 +32,7 @@ using namespace std;
 * Arguments    : 
 * Remarks      : 
 ********************************************************************************/
-Connection::Connection ( boost::asio::io_service & io )  : _socket(io)
-{ 
-    ;
-}
+Connection::Connection ( boost::asio::io_service & io )  : _socket(io) { ; }
 /*******************************************************************************
 * Deconstructor: 
 * Description  : 
@@ -53,8 +50,14 @@ Connection::~Connection ( void ) { ; }
 void Connection::handle_write ( const boost::system::error_code& error,
                                   size_t size )
 {
-    if ( error )
+    if ( !error )
+    {
+        /* no response on write ack */
+    }
+    else
+    {
         _socket.close();
+    }
 }
 /*******************************************************************************
 * Function     : 
@@ -63,20 +66,18 @@ void Connection::handle_write ( const boost::system::error_code& error,
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Connection::handle_read ( const boost::system::error_code& error,
-                                  size_t size )
+void Connection::handle_read ( const boost::system::error_code& error, size_t size )
 {
-    if (!error)
+    if ( !error )
     {
-        string line;
         istream is(&_input_buffet);
-        getline(is, line);        
-        cout << line << endl;
+        getline(is, _message);
         start_read();
     }
     else
     {
         cout << "Error on receive: " << error.message() << endl;
+        _socket.close();
     }
 }
 /*******************************************************************************
@@ -135,4 +136,70 @@ void Connection::start_read ( void )
                                               shared_from_this(),
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::bytes_transferred));
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+bool Connection::is_connected ( void )
+{
+    return _socket.is_open();
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+string Connection::get_message ( void )
+{
+    return _message;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Connection::set_server_computation ( string _in )
+{
+    _server_computation = _in;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+string Connection::get_server_computation ( void )
+{
+    return _server_computation;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Connection::set_checked ( bool _in )
+{
+    _checked = _in;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+bool Connection::is_checked ( void )
+{
+    return _checked;
 }
