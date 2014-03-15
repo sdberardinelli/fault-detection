@@ -36,6 +36,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/src/Client.o \
+	${OBJECTDIR}/src/Distributions.o \
 	${OBJECTDIR}/src/TestFunctions.o \
 	${OBJECTDIR}/src/main.o
 
@@ -68,6 +69,11 @@ ${OBJECTDIR}/src/Client.o: src/Client.cpp
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Client.o src/Client.cpp
+
+${OBJECTDIR}/src/Distributions.o: src/Distributions.cpp 
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Distributions.o src/Distributions.cpp
 
 ${OBJECTDIR}/src/TestFunctions.o: src/TestFunctions.cpp 
 	${MKDIR} -p ${OBJECTDIR}/src

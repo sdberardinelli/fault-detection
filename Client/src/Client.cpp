@@ -19,16 +19,20 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/bind.hpp>
-#include<boost/algorithm/string/split.hpp>                                      
-#include<boost/algorithm/string.hpp>    
+#include <boost/algorithm/string/split.hpp>                                      
+#include <boost/algorithm/string.hpp> 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <iostream>
 #include <vector>
+#include <valarray>
 
 /************************************
  * Namespaces 
  ************************************/
 using namespace std;
 using namespace TestFunctions;
+using namespace boost::filesystem;
 using boost::asio::deadline_timer;
 using boost::asio::ip::tcp;
 
@@ -43,14 +47,53 @@ using boost::asio::ip::tcp;
 * Remarks      : 
 ********************************************************************************/
 Client::Client ( boost::asio::io_service& io_service ) : _stopped(false),
-                                                           _socket(io_service),
-                                                           _deadline(io_service)
+                                                         _socket(io_service),
+                                                         _deadline(io_service)
 #if HEARTBEAT
         
-                                                           ,_heartbeat_timer(io_service)
+                                                         ,_heartbeat_timer(io_service)
 #endif
 {
-    ;
+    vector<string> strs;
+    valarray<double> parameters;
+    std::string str; 
+    boost::filesystem::ifstream file_in;
+    file_in.open(CONFIG_FILENAME,ios::in);
+
+    if ( !file_in )
+    {
+        _fault = false;
+        _dist_type = NONE;
+    }
+    else
+    {
+        try
+        {
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _fault = (strs[1].compare(("true"))?false:true);
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _dist_type = DistToEnum(strs[1].c_str());
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            boost::algorithm::split(strs,strs[1],boost::is_any_of(","));
+            
+            parameters.resize(strs.size());
+            for ( vector<int>::size_type i = 0; i != strs.size(); i++ )
+            {
+                parameters[i] = atof(strs[i].c_str());
+            }
+            
+            _dist.set_parameters(parameters);
+            _dist.construct_distributions();
+        }
+        catch(const boost::filesystem::ifstream::failure & ex)
+        {
+            _fault = false;
+            _dist_type = NONE;
+        }
+    }
 }
 /*******************************************************************************
 * Deconstructor: 
@@ -109,8 +152,9 @@ void Client::start_connect ( tcp::resolver::iterator endpoint_iter )
 {
     if (endpoint_iter != tcp::resolver::iterator())
     {
+#if DEBUG
         cout << "Trying " << endpoint_iter->endpoint() << "..." << endl;
-
+#endif
         // Set a deadline for the connect operation.
         _deadline.expires_from_now(boost::posix_time::seconds(60));
 
@@ -136,7 +180,7 @@ void Client::start_connect ( tcp::resolver::iterator endpoint_iter )
 * Remarks      : 
 ********************************************************************************/
 void Client::handle_connect ( const boost::system::error_code& ec, 
-                                tcp::resolver::iterator endpoint_iter )
+                              tcp::resolver::iterator endpoint_iter )
 {
     if (_stopped)
     {
@@ -166,8 +210,9 @@ void Client::handle_connect ( const boost::system::error_code& ec,
     }
     else // Otherwise we have successfully established a connection.
     {
+#if DEBUG
         cout << "Connected to " << endpoint_iter->endpoint() << endl;
-
+#endif
         // Start the input actor.
         start_read();
 #if HEARTBEAT
@@ -214,53 +259,18 @@ void Client::handle_read ( const boost::system::error_code& ec )
     {
         // Extract the newline-delimited message from the buffer.
         string line;
+        vector<string> strs;
         istream is(&_input_buffer);
         getline(is, line);
-        stringstream ss;
-        vector<string> strs;
 
         // Empty messages are heartbeats and so ignored.
         if (!line.empty())
-        {
-            switch ( line[0] )
-            {
-                case TestFunctions::DO_ADD:
-                {
-                    boost::algorithm::split(strs,line,boost::is_any_of(","));
-                    int value = _tf.do_add(atoi(strs[1].c_str()),
-                                           atoi(strs[2].c_str()));
-                    ss << value;
-                    _reply_message = (ss.str()+"\n");
-                }
-                    break;
-                case TestFunctions::DO_STR:
-                {
-                    boost::algorithm::split(strs,line,boost::is_any_of(","));
-                    string value = _tf.do_string_cat(strs[1], strs[2]);
-                    _reply_message = (value+"\n");
-                    
-                }
-                    break;
-                case TestFunctions::DO_MUL:
-                {
-                    boost::algorithm::split(strs,line,boost::is_any_of(","));
-                    int value = _tf.do_multipy(atoi(strs[1].c_str()),
-                                               atoi(strs[2].c_str()));
-                    ss << value;
-                    _reply_message = (ss.str()+"\n");
-                }
-                    break;
-                default:
-                    cout << "NULL" << endl;
-                    break;
-            }            
+        {          
+            boost::algorithm::split(strs,line,boost::is_any_of(","));
+            process_message(ToEnum(strs[0].c_str()),strs);
         }
         
-        ss.str(string());
         strs.clear();
-
-        start_write();
-        start_read();
     }
     else
     {
@@ -353,4 +363,81 @@ void Client::check_deadline ( void )
 
     // Put the actor back to sleep.
     _deadline.async_wait(boost::bind(&Client::check_deadline, this));    
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Client::process_message ( TEST_FUNCTIONS CMD,
+                               std::vector<std::string>& strs )
+{
+    stringstream ss;
+    double probability;
+    string param1 = strs[1], param2 = strs[2];
+    static const char modification[] = "0123456789";
+    
+    if ( _fault )
+    {
+        switch ( _dist_type )
+        {
+            case BETA:
+                probability = _dist.beta();
+                break;
+            case UNIFORM:
+                probability = _dist.uniform();
+                break;
+            case NORMAL:
+                probability = _dist.normal();
+                break;
+            case GAMMA:
+                probability = _dist.gamma();
+                break;
+            default:
+                break;
+        }
+        
+        if ( double(rand()/double(RAND_MAX)) < probability )
+        {
+            if ( double(rand()/double(RAND_MAX)) < 0.51 )
+                param1[rand()%(param1.length()-1)] = modification[rand()%(sizeof(modification)-1)];
+            if ( rand()/double(RAND_MAX) < 0.51 )
+                param2[rand()%(param2.length()-1)] = modification[rand()%(sizeof(modification)-1)];
+        }
+    }
+        
+    switch ( CMD )
+    {
+        case TestFunctions::DO_ADD:
+        {        
+            int value = _tf.do_add(atoi(param1.c_str()), atoi(param2.c_str()));
+            ss << value;
+            _reply_message = (ss.str()+"\n");
+        }
+            break;
+        case TestFunctions::DO_STR:
+        {
+            string value = _tf.do_string_cat(param1, param2);
+            _reply_message = (value+"\n");
+
+        }
+            break;
+        case TestFunctions::DO_MUL:
+        {
+            int value = _tf.do_multipy(atoi(param1.c_str()), atoi(param2.c_str()));
+            ss << value;
+            _reply_message = (ss.str()+"\n");
+        }
+            break;
+        default:;
+            break;
+    }  
+    
+    
+    ss.str(string());
+    
+    start_write();
+    start_read();    
 }

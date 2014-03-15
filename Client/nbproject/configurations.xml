@@ -5,17 +5,20 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>hdr/Client.hpp</itemPath>
+      <itemPath>hdr/Distributions.hpp</itemPath>
       <itemPath>hdr/TestFunctions.hpp</itemPath>
       <itemPath>hdr/main.hpp</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
                    projectFiles="true">
+      <itemPath>config</itemPath>
     </logicalFolder>
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>src/Client.cpp</itemPath>
+      <itemPath>src/Distributions.cpp</itemPath>
       <itemPath>src/TestFunctions.cpp</itemPath>
       <itemPath>src/main.cpp</itemPath>
     </logicalFolder>
@@ -49,6 +52,8 @@
           <commandLine>-lboost_system -lpthread</commandLine>
         </linkerTool>
       </compileType>
+      <item path="config" ex="false" tool="3" flavor2="0">
+      </item>
       <folder path="HeaderFiles">
         <ccTool>
           <incDir>
@@ -58,11 +63,15 @@
       </folder>
       <item path="hdr/Client.hpp" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="hdr/Distributions.hpp" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="hdr/TestFunctions.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="hdr/main.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Client.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Distributions.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/TestFunctions.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -89,13 +98,19 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="config" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="hdr/Client.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="hdr/Distributions.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="hdr/TestFunctions.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="hdr/main.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Client.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Distributions.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/TestFunctions.cpp" ex="false" tool="1" flavor2="0">
       </item>
