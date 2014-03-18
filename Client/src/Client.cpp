@@ -32,6 +32,7 @@
  ************************************/
 using namespace std;
 using namespace TestFunctions;
+using namespace Distributions;
 using namespace boost::filesystem;
 using boost::asio::deadline_timer;
 using boost::asio::ip::tcp;
@@ -54,9 +55,10 @@ Client::Client ( boost::asio::io_service& io_service ) : _stopped(false),
                                                          ,_heartbeat_timer(io_service)
 #endif
 {
+    tcp::resolver r(io_service);
     vector<string> strs;
     valarray<double> parameters;
-    std::string str; 
+    std::string str,ip,port; 
     boost::filesystem::ifstream file_in;
     file_in.open(CONFIG_FILENAME,ios::in);
 
@@ -69,6 +71,12 @@ Client::Client ( boost::asio::io_service& io_service ) : _stopped(false),
     {
         try
         {
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            ip = strs[1];
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));   
+            port = strs[1];
             getline(file_in, str);
             boost::algorithm::split(strs,str,boost::is_any_of("="));
             _fault = (strs[1].compare(("true"))?false:true);
@@ -94,6 +102,8 @@ Client::Client ( boost::asio::io_service& io_service ) : _stopped(false),
             _dist_type = NONE;
         }
     }
+
+    this->start(r.resolve(tcp::resolver::query(ip, port)));
 }
 /*******************************************************************************
 * Deconstructor: 

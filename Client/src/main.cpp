@@ -36,11 +36,7 @@ int main ( int argc, char* argv[] )
     try
     {
         boost::asio::io_service io_service;
-        tcp::resolver r(io_service);
         Client c(io_service);
-
-        c.start(r.resolve(tcp::resolver::query("10.0.0.11", "1024")));
-
         io_service.run();
     }
     catch (std::exception& e)
