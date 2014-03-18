@@ -1,24 +1,21 @@
 /*******************************************************************************
- * Filename      : Connection.hpp
- * Source File(s): Connection.cpp
+ * Filename      : MessagePool.hpp
+ * Source File(s): MessagePool.cpp
  * Description   :
  * Authors(s)    : 
  * Date Created  : 
  * Date Modified : 
  * Modifier(s)   : 
  *******************************************************************************/
-#ifndef CONNECTION_H
-#define	CONNECTION_H
+#ifndef MESSAGEPOOL_H
+#define	MESSAGEPOOL_H
 
 /*******************************************************************************
 *                                   INCLUDES
 ********************************************************************************/
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/asio.hpp>
-#include "Participant.hpp"
-#include "MessagePool.hpp"
+#include "Message.hpp"
 #include "typedefs.hpp"
+#include <set>
 
 /*******************************************************************************
 *                                    DATATYPES
@@ -35,32 +32,27 @@
 /*******************************************************************************
 *  CLASS DEFINITIONS
 ********************************************************************************/
-class Connection : public Participant,
-                   public std::enable_shared_from_this<Connection>
+class MessagePool
 {
     public: 
         /* constructors */
-        Connection (  boost::asio::ip::tcp::socket,  MessagePool& );
-        ~Connection ( void );
+        MessagePool ( void );
+        ~MessagePool ( void );
 
         /* variables */
         
         /* functions */
-        
-        void start ( void );
-        void deliver (const Message& );
-        std::string get_connection_info ( void );
-
+        void join ( participant_ptr );
+        void leave ( participant_ptr );
+        void deliver ( const Message& );
+        int  message_count ( void );
+        int  participant_count ( void );
     private:
         /* functions */
-        void do_write ( void );
-        void do_read_header ( void );
-        void do_read_body ( void );
         
         /* variables */
-        boost::asio::ip::tcp::socket _socket;
-        MessagePool&                 _mp;
-        Message                      _message;
-        message_queue                _write_messages;
+        enum { max_recent_msgs = 100 };
+        std::set<participant_ptr> _participants;
+        message_queue             _recent_msgs;        
 };
 #endif

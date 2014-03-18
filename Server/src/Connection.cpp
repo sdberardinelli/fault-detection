@@ -11,11 +11,13 @@
  * Included Headers 
  ************************************/
 #include "Connection.hpp"
+#include "MessagePool.hpp"
+#include "Participant.hpp"
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/thread.hpp>
+#include <utility>
 
 /************************************
  * Namespaces 
@@ -32,32 +34,22 @@ using namespace std;
 * Arguments    : 
 * Remarks      : 
 ********************************************************************************/
-Connection::Connection ( boost::asio::io_service & io )  : _socket(io) { ; }
+Connection::Connection ( boost::asio::ip::tcp::socket _in_socket,
+                          MessagePool& _in_mp )  : _socket(move(_in_socket)), 
+                                                   _mp(_in_mp)
+{
+    cout << get_connection_info() << " connected" << endl;
+}
 /*******************************************************************************
 * Deconstructor: 
 * Description  : 
 * Arguments    : 
 * Remarks      : 
 ********************************************************************************/
-Connection::~Connection ( void ) { ; }
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-void Connection::handle_write ( const boost::system::error_code& error,
-                                  size_t size )
-{
-    if ( !error )
-    {
-        /* no response on write ack */
-    }
-    else
-    {
-        _socket.close();
-    }
+Connection::~Connection ( void )
+{ 
+    cout << get_connection_info() << " disonnected" << endl;
+    _socket.close();
 }
 /*******************************************************************************
 * Function     : 
@@ -66,23 +58,25 @@ void Connection::handle_write ( const boost::system::error_code& error,
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Connection::handle_read ( const boost::system::error_code& error, size_t size )
+void Connection::start ( void )
 {
-    if ( !error )
+    _mp.join(shared_from_this());
+    do_read_header();
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Connection::deliver ( const Message& msg )
+{
+    bool write_in_progress = !_write_messages.empty();
+    _write_messages.push_back(msg);
+    if (!write_in_progress)
     {
-        istream is(&_input_buffet);
-        getline(is, _message);
-        cout << "Received \"" << _message
-                               << "\" from " 
-                               << get_connection_info() 
-                               << endl << endl;
-        start_read();
-        _message_received = true;
-    }
-    else
-    {
-        cout << "Error on receive: " << error.message() << endl;
-        _socket.close();
+        do_write();
     }
 }
 /*******************************************************************************
@@ -92,20 +86,23 @@ void Connection::handle_read ( const boost::system::error_code& error, size_t si
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-boost::asio::ip::tcp::socket& Connection::socket ( void )
+void Connection::do_read_header ( void )
 {
-    return _socket;
-}
- /*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-Connection::pointer Connection::create ( boost::asio::io_service & _io_service )
-{
-    return pointer(new Connection(_io_service));
+    auto self(shared_from_this());
+    boost::asio::async_read(_socket,
+                            boost::asio::buffer(_message.data(), 
+                                                Message::header_length),
+                                                [this, self](boost::system::error_code ec, size_t)
+                                                {
+                                                    if (!ec && _message.decode_header())
+                                                    {
+                                                        do_read_body();
+                                                    }
+                                                    else
+                                                    {
+                                                        _mp.leave(shared_from_this());
+                                                    }
+                                                });
 }
 /*******************************************************************************
 * Function     : 
@@ -114,77 +111,52 @@ Connection::pointer Connection::create ( boost::asio::io_service & _io_service )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Connection::start_write ( string _message )
-{    
-    start_read();
-
+void Connection::do_read_body ( void )
+{
+    auto self(shared_from_this());
+    boost::asio::async_read(_socket,
+                            boost::asio::buffer(_message.body(), _message.body_length()),
+                            [this, self](boost::system::error_code ec, size_t)
+                            {
+                                if (!ec)
+                                {
+                                    _mp.deliver(_message);
+                                    do_read_header();
+                                }
+                                else
+                                {
+                                    _mp.leave(shared_from_this());
+                                }
+                            });
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Connection::do_write ( void )
+{
+    auto self(shared_from_this());
     boost::asio::async_write(_socket,
-                             boost::asio::buffer(_message),
-                             boost::bind( &Connection::handle_write,
-                                          shared_from_this(),
-                                          boost::asio::placeholders::error,
-                                          boost::asio::placeholders::bytes_transferred));
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-void Connection::start_read ( void )
-{
-    boost::asio::async_read_until(_socket,
-                                  _input_buffet, 
-                                  '\n',
-                                  boost::bind(&Connection::handle_read, 
-                                              shared_from_this(),
-                                              boost::asio::placeholders::error,
-                                              boost::asio::placeholders::bytes_transferred));
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-bool Connection::is_connected ( void )
-{
-    return _socket.is_open();
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-string Connection::get_message ( void )
-{
-    return _message;
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-void Connection::set_received ( bool _in )
-{
-    _message_received = _in;
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-bool Connection::is_received ( void )
-{
-    return _message_received;
+                            boost::asio::buffer(_write_messages.front().data(),
+                                                _write_messages.front().length()),
+                            [this, self](boost::system::error_code ec, size_t)
+                            {
+                                if (!ec)
+                                {
+                                    _write_messages.pop_front();
+                                    if (!_write_messages.empty())
+                                    {
+                                        do_write();
+                                    }
+                                }
+                                else
+                                {
+                                    _mp.leave(shared_from_this());
+                                }
+                            });
 }
 /*******************************************************************************
 * Function     : 

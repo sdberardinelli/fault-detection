@@ -1,24 +1,19 @@
 /*******************************************************************************
- * Filename      : Connection.hpp
- * Source File(s): Connection.cpp
+ * Filename      : Message.hpp
+ * Source File(s): Message.cpp
  * Description   :
  * Authors(s)    : 
  * Date Created  : 
  * Date Modified : 
  * Modifier(s)   : 
  *******************************************************************************/
-#ifndef CONNECTION_H
-#define	CONNECTION_H
+#ifndef MESSAGE_H
+#define	MESSAGE_H
 
 /*******************************************************************************
 *                                   INCLUDES
 ********************************************************************************/
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/asio.hpp>
-#include "Participant.hpp"
-#include "MessagePool.hpp"
-#include "typedefs.hpp"
+#include <cstddef>
 
 /*******************************************************************************
 *                                    DATATYPES
@@ -35,32 +30,32 @@
 /*******************************************************************************
 *  CLASS DEFINITIONS
 ********************************************************************************/
-class Connection : public Participant,
-                   public std::enable_shared_from_this<Connection>
+class Message
 {
     public: 
         /* constructors */
-        Connection (  boost::asio::ip::tcp::socket,  MessagePool& );
-        ~Connection ( void );
+        Message ( void );
+        ~Message ( void );
 
         /* variables */
+        enum { header_length = 4 };
+        enum { max_body_length = 512 };
         
         /* functions */
-        
-        void start ( void );
-        void deliver (const Message& );
-        std::string get_connection_info ( void );
-
+        const char* data ( void ) const;
+        char* data ( void );
+        std::size_t length ( void ) const;
+        const char* body ( void ) const;
+        char* body ( void );
+        std::size_t body_length ( void ) const;
+        void body_length ( std::size_t );
+        bool decode_header ( void );
+        void encode_header ( void );
     private:
         /* functions */
-        void do_write ( void );
-        void do_read_header ( void );
-        void do_read_body ( void );
         
         /* variables */
-        boost::asio::ip::tcp::socket _socket;
-        MessagePool&                 _mp;
-        Message                      _message;
-        message_queue                _write_messages;
+        char data_[header_length + max_body_length];
+        std::size_t body_length_;       
 };
 #endif

@@ -35,8 +35,10 @@ int main ( int argc, char* argv[] )
     try
     {
         boost::asio::io_service io_service;
-        Server server(io_service, 1024);
-        server.start(); /* run forever */
+        
+        boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), 1024);
+        Server server(io_service, endpoint);
+        server.start();
         io_service.run();
     }
     catch (std::exception& e)

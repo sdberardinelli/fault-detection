@@ -14,12 +14,14 @@
 *                                   INCLUDES
 ********************************************************************************/
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
+#include <thread>
 #include <vector>
 #include "Connection.hpp"
 #include "TestFunctions.hpp"
 #include "Distributions.hpp"
 #include "Logger.hpp"
+#include "Participant.hpp"
+#include "MessagePool.hpp"
 
 /*******************************************************************************
 *                                    DATATYPES
@@ -41,7 +43,7 @@ class Server
 {
     public: 
         /* constructors */
-        Server ( boost::asio::io_service&, short );
+        Server ( boost::asio::io_service&, const boost::asio::ip::tcp::endpoint& );
         ~Server ( void );
 
         /* functions */
@@ -51,12 +53,12 @@ class Server
         bool is_running ( void );
                 
         /* variables */
-
+        
     private:
         /* functions */
         void start_accept ( void );
-        void handle_accept (Connection::pointer, const boost::system::error_code& );
-        
+                
+        // ALGORITHM
         std::string construct_job ( char );
         void        send_jobs      ( std::string );
         bool        check_fault    ( void );
@@ -66,9 +68,12 @@ class Server
         
         /* variables */
         bool                              _running;
-        boost::thread *                   _thread;
-        std::vector<Connection::pointer>  _connections;
+        std::thread *                     _thread;
         boost::asio::ip::tcp::acceptor    _acceptor;
+        boost::asio::ip::tcp::socket      _socket;
+        MessagePool                       _mp;
+        
+        // ALGORITHM
         TestFunctions::TestFunction       _tf;
         Distributions::Distribution       _dist;
         Distributions::DISTRIBUTIONS      _dist_type;
