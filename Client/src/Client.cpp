@@ -161,7 +161,6 @@ void Client::run ( void )
 {
     thread t([this](){ _io_service.run(); });
 
-    char line[Message::max_body_length + 1];
     while ( is_connected() )
     {
         this_thread::sleep_for (chrono::seconds(10));
@@ -236,18 +235,9 @@ void Client::do_read_body ( void )
                                    if (!str.empty())
                                    {   
                                        Message msg;
-                                       //boost::algorithm::split(strs,str,boost::is_any_of(","));
-                                       //msg = process_message(ToEnum(strs[0].c_str()),strs);
-                                       //write(msg);
-                                       
-                                       
-                                        string _message = "hey, i got it";
-
-                                        msg.body_length(strlen(_message.c_str()));
-                                        memcpy(msg.body(), _message.c_str(), msg.body_length());
-                                        msg.encode_header();   
-                                        
-                                        write(msg);
+                                       boost::algorithm::split(strs,str,boost::is_any_of(","));
+                                       msg = process_message(ToEnum(strs[0].c_str()),strs);
+                                       write(msg);
                                    }                
                                    
                                    do_read_header();
@@ -274,7 +264,6 @@ void Client::do_write ( void )
                              {
                                  if (!ec)
                                  {
-                                     cout << "writting" << endl;
                                      _write_msgs.pop_front();
                                      if (!_write_msgs.empty())
                                      {
@@ -336,13 +325,12 @@ Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
         {        
             int value = _tf.do_add(atoi(param1.c_str()), atoi(param2.c_str()));
             ss << value;
-            _reply_message = (ss.str()+"\n");
+            _reply_message = ss.str();
         }
             break;
         case TestFunctions::DO_STR:
         {
-            string value = _tf.do_string_cat(param1, param2);
-            _reply_message = (value+"\n");
+            _reply_message= _tf.do_string_cat(param1, param2);
 
         }
             break;
@@ -350,10 +338,10 @@ Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
         {
             int value = _tf.do_multipy(atoi(param1.c_str()), atoi(param2.c_str()));
             ss << value;
-            _reply_message = (ss.str()+"\n");
+            _reply_message = ss.str();
         }
             break;
-        default:;
+        default:
             break;
     }  
     
