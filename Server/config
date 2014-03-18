@@ -1,0 +1,5 @@
+distribution=uniform
+parameters=0,1,0.5
+quorum=0.5
+client=1
+timeout=1

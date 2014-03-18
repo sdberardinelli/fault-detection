@@ -32,6 +32,7 @@
 /*******************************************************************************
 *                                    DEFINES
 ********************************************************************************/
+#define CONFIG_FILENAME  "config"
 
 /*******************************************************************************
 *  CLASS DEFINITIONS
@@ -56,6 +57,13 @@ class Server
         void start_accept ( void );
         void handle_accept (Connection::pointer, const boost::system::error_code& );
         
+        std::string construct_job ( char );
+        void        send_jobs      ( std::string );
+        bool        check_fault    ( void );
+        std::string self_test      ( TestFunctions::TEST_FUNCTIONS, 
+                                     std::vector<std::string>& );
+        int         total_received  ( void );
+        
         /* variables */
         bool                              _running;
         boost::thread *                   _thread;
@@ -63,9 +71,11 @@ class Server
         boost::asio::ip::tcp::acceptor    _acceptor;
         TestFunctions::TestFunction       _tf;
         Distributions::Distribution       _dist;
+        Distributions::DISTRIBUTIONS      _dist_type;
         Logger                            _log;
-
-
-        
+        double                            _quorum_ratio;  
+        double                            _client_ratio;
+        double                            _receive_ratio;
+        int                               _timeout;
 };
 #endif

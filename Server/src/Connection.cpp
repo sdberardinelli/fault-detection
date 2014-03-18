@@ -72,7 +72,12 @@ void Connection::handle_read ( const boost::system::error_code& error, size_t si
     {
         istream is(&_input_buffet);
         getline(is, _message);
+        cout << "Received \"" << _message
+                               << "\" from " 
+                               << get_connection_info() 
+                               << endl << endl;
         start_read();
+        _message_received = true;
     }
     else
     {
@@ -166,9 +171,9 @@ string Connection::get_message ( void )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Connection::set_server_computation ( string _in )
+void Connection::set_received ( bool _in )
 {
-    _server_computation = _in;
+    _message_received = _in;
 }
 /*******************************************************************************
 * Function     : 
@@ -177,9 +182,9 @@ void Connection::set_server_computation ( string _in )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-string Connection::get_server_computation ( void )
+bool Connection::is_received ( void )
 {
-    return _server_computation;
+    return _message_received;
 }
 /*******************************************************************************
 * Function     : 
@@ -188,18 +193,9 @@ string Connection::get_server_computation ( void )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Connection::set_checked ( bool _in )
+string Connection::get_connection_info ( void )
 {
-    _checked = _in;
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-bool Connection::is_checked ( void )
-{
-    return _checked;
+    stringstream ss;
+    ss << _socket.remote_endpoint().port();
+    return _socket.remote_endpoint().address().to_string() + ":" + ss.str();
 }

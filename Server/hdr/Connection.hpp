@@ -49,11 +49,11 @@ class Connection : public boost::enable_shared_from_this<Connection>
         void start_read ( void );
         bool is_connected ( void );
         std::string get_message ( void );
-        std::string get_server_computation ( void );
-        void set_server_computation ( std::string );
         
-        bool is_checked ( void );
-        void set_checked ( bool );
+        bool is_received ( void );
+        void set_received ( bool );
+        
+        std::string get_connection_info ( void );
         
     private:
         /* functions */
@@ -64,7 +64,6 @@ class Connection : public boost::enable_shared_from_this<Connection>
         boost::asio::ip::tcp::socket _socket;
         boost::asio::streambuf       _input_buffet;
         std::string                  _message;
-        std::string                  _server_computation;
-        bool                         _checked;
+        bool                         _message_received;
 };
 #endif

@@ -14,16 +14,22 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
+#include <boost/algorithm/string/split.hpp>                                      
+#include <boost/algorithm/string.hpp> 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
 #include <valarray>
+#include <string>
 
 /************************************
  * Namespaces 
  ************************************/
 using namespace std;
 using namespace TestFunctions;
+using namespace Distributions;
 
 /************************************
  * Local Variables 
@@ -40,14 +46,54 @@ Server::Server ( boost::asio::io_service & io, short port ) : _acceptor(io,
                                                                                                        port))
 {
     srand (time(NULL));
-    valarray<double> paramaters(3);
-    
-    paramaters[0] = 0;
-    paramaters[1] = 1;
-    paramaters[2] = 0;
-    
-    _dist.set_parameters(paramaters);
-    _dist.construct_distributions();
+
+    vector<string> strs;
+    valarray<double> parameters;
+    std::string str; 
+    boost::filesystem::ifstream file_in;
+    file_in.open(CONFIG_FILENAME,ios::in);
+
+    if ( !file_in )
+    {
+        ;
+    }
+    else
+    {
+        try
+        {
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _dist_type = DistToEnum(strs[1].c_str());
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            boost::algorithm::split(strs,strs[1],boost::is_any_of(","));
+            
+            parameters.resize(strs.size());
+            for ( vector<int>::size_type i = 0; i != strs.size(); i++ )
+            {
+                parameters[i] = atof(strs[i].c_str());
+            }
+            
+            _dist.set_parameters(parameters);
+            _dist.construct_distribution(_dist_type);
+           
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _quorum_ratio = atof(strs[1].c_str());
+            
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _client_ratio = atof(strs[1].c_str());            
+            
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _timeout = atoi(strs[1].c_str());            
+        }
+        catch(const boost::filesystem::ifstream::failure & ex)
+        {
+            ;
+        }
+    }
     
     _running = false;
     start_accept();
@@ -137,129 +183,35 @@ bool Server::is_running ( void )
 ********************************************************************************/
 void Server::run ( void )
 {
+    int timeout;
     char in;
-    string _message, param1, param2, _server_computation;
-    stringstream ss;
+    string _message,_self_test_message;
+    
     do 
     {  
         if ( _connections.size() == 0 )
             continue;
         
-        in = (rand()%3) + TestFunctions::DO_ADD;
-        switch ( in )
-        {
-            case TestFunctions::DO_ADD:
-            {
-                ss << (rand() % 100000);
-                param1 = ss.str();
-                ss.str(string());
-                ss << (rand() % 100000);
-                param2 = ss.str();
-                ss.str(string());
-                _message = string(ToString(TestFunctions::DO_ADD))+","+
-                           param1+","+
-                           param2+"\n";
-            }
-                break;
-            case TestFunctions::DO_STR:
-            {
-                static const char alphanum[] = "0123456789!@#$%^&*ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-                int length = rand() % 100;
-                for ( int i = 0; i < length; i++ )
-                {
-                    param1 += alphanum[rand() % (sizeof(alphanum) - 1)];
-                }
-                length = rand() % 100;
-                for ( int i = 0; i < length; i++ )
-                {
-                    param2 += alphanum[rand() % (sizeof(alphanum) - 1)];
-                }
-                _message = string(ToString(TestFunctions::DO_STR))+","+
-                                           param1+","+
-                                           param2+"\n";
-            }
-                break;
-            case TestFunctions::DO_MUL:
-            {
-                ss << (rand() % 100000);
-                param1 = ss.str();
-                ss.str(string());
-                ss << (rand() % 100000);
-                param2 = ss.str();
-                ss.str(string());
-                _message = string(ToString(TestFunctions::DO_MUL))+","+
-                           param1+","+
-                           param2+"\n";
-            }
-                break;
-            default:
-                _message = in+"\n";
-                break;
-        }
-        
-
-        /* send command */
-        for ( vector<int>::size_type i = 0; i != _connections.size(); i++ )
-        {
-            if ( _connections[i]->is_connected() )
-            {
-                _connections[i]->start_write(_message);
-                
-                if ( rand()/double(RAND_MAX) < _dist.uniform() )
-                {
-                    _connections[i]->set_checked(true);
-                    cout << "Checking";
-                    switch ( in )
-                    {
-                        case TestFunctions::DO_ADD:
-                        {
-                            int value = _tf.do_add(atoi(param1.c_str()),
-                                                   atoi(param2.c_str()));
-                            ss << value;
-                            _server_computation = ss.str();
-                        }
-                            break;
-                        case TestFunctions::DO_STR:
-                        {
-                            _server_computation = _tf.do_string_cat(param1, param2);
-                        }
-                            break;
-                        case TestFunctions::DO_MUL:
-                        {
-                            int value = _tf.do_multipy(atoi(param1.c_str()),
-                                                       atoi(param2.c_str()));
-                            ss << value;
-                            _server_computation = ss.str();
-                        }
-                            break;
-                        default:
-                            _message = in+"\n";
-                            break;
-                    }
-                    _connections[i]->set_server_computation(_server_computation);
-                }
-                else
-                {
-                    cout << "Not Checking" << endl;
-                    _connections[i]->set_checked(false);
-                }
-                
-            }
-            else
-            {
-                //swap(_connections[i], _connections.back());
-                //_connections.pop_back();
-                cout << "removing connection" << endl;
-            }
-        }
-        
+        in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
+        _message = construct_job(in);            /* construct message for job */
+        send_jobs(_message);                     /* send job to n clients     */
         try
         {
-            // Sleep and check for interrupt.
-            // To check for interrupt without sleep,
-            // use boost::this_thread::interruption_point()
-            // which also throws boost::thread_interrupted
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+            timeout = 0;                         /* wait until quorum ratio   */
+            do                                   /* or a timeout of 1 second  */
+            {
+                if ( _connections.size() == 0 )
+                    break;
+                
+                _receive_ratio = total_received()/_connections.size();
+                boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+            }while ( _receive_ratio <= _client_ratio && timeout++ < _timeout*10);
+            
+            if ( timeout == 11 )
+            {
+                cout << "query timeout" << endl;
+                continue;
+            }
         }
         catch(boost::thread_interrupted&)
         {
@@ -267,26 +219,35 @@ void Server::run ( void )
             break;
         }  
         
-        for ( vector<int>::size_type i = 0; i != _connections.size(); i++ )
+        if ( check_fault() )
         {
-            if ( _connections[i]->is_checked() )
+            /* quorum agree */
+            cout << "answer is accepted" << endl;
+        }
+        else
+        {
+            /* quorum disagree: fault */
+             cout << "answer is NOT accepted" << endl;
+        }
+        
+        if ( rand()/double(RAND_MAX) < _dist.uniform() )
+        {
+            vector<string> strs;
+            boost::algorithm::split(strs,_message,boost::is_any_of(","));
+            _self_test_message = self_test(ToEnum(strs[0].c_str()),strs);
+            
+            
+            if ( _self_test_message.compare(_connections[0]->get_message()) == 0 )
             {
-                if ( _connections[i]->get_server_computation().compare(_connections[i]->get_message()) == 0 )
-                {
-                    cout << " ... agree" << endl;
-                }
-                else
-                {
-                    cout << " ... disagree" << endl;
-                }
+                cout << "answer is accepted" << endl;
+            }
+            else
+            {
+                 cout << "answer is NOT accepted" << endl;
             }
         }        
         
-        param1 = "";
-        param2 = "";
-        ss.str(string());
-        
-    }while ( in != 'q' || !_running );
+    }while ( _running );
 }
 /*******************************************************************************
 * Function     : 
@@ -295,3 +256,192 @@ void Server::run ( void )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
+string Server::construct_job ( char in )
+{
+    string _message, param1, param2;
+    stringstream ss;
+    
+    switch ( in )
+    {
+        case TestFunctions::DO_ADD:
+        {
+            ss << (rand() % 100000);
+            param1 = ss.str();
+            ss.str(string());
+            ss << (rand() % 100000);
+            param2 = ss.str();
+            ss.str(string());
+            _message = string(ToString(TestFunctions::DO_ADD))+","+
+                       param1+","+
+                       param2+"\n";
+        }
+            break;
+        case TestFunctions::DO_STR:
+        {
+            static const char alphanum[] = "0123456789!@#$%^&*ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            int length = rand() % 100;
+            for ( int i = 0; i < length; i++ )
+            {
+                param1 += alphanum[rand() % (sizeof(alphanum) - 1)];
+            }
+            length = rand() % 100;
+            for ( int i = 0; i < length; i++ )
+            {
+                param2 += alphanum[rand() % (sizeof(alphanum) - 1)];
+            }
+            _message = string(ToString(TestFunctions::DO_STR))+","+
+                                       param1+","+
+                                       param2+"\n";
+        }
+            break;
+        case TestFunctions::DO_MUL:
+        {
+            ss << (rand() % 100000);
+            param1 = ss.str();
+            ss.str(string());
+            ss << (rand() % 100000);
+            param2 = ss.str();
+            ss.str(string());
+            _message = string(ToString(TestFunctions::DO_MUL))+","+
+                       param1+","+
+                       param2+"\n";
+        }
+            break;
+        default:
+            _message = in+"\n";
+            break;
+    }
+    
+    return _message;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Server::send_jobs ( string _message )
+{
+    for ( vector<int>::size_type i = 0; i < _connections.size(); i++ )
+    {
+        if ( _connections[i]->is_connected() )
+        {   
+            _connections[i]->set_received(false);
+                    
+            if ( _dist.user_pick(_dist_type) ) 
+            {
+                _connections[i]->start_write(_message);
+                boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+                
+                _message.erase(remove(_message.begin(), 
+                                      _message.end(), 
+                                      '\n'), 
+                                      _message.end());            
+                cout << "Sending \"" << _message
+                                      << "\" to " 
+                                      << _connections[i]->get_connection_info() 
+                                      << endl << endl;
+            }
+            else
+            {
+                ;
+            }
+        }
+        else
+        {
+            if ( _connections.size() > 1 )
+                swap(_connections[i], _connections.back());
+            _connections.pop_back();
+            
+            if ( _connections.size() == 0 )
+                break;
+        }
+    }    
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+bool Server::check_fault ( void )
+{
+    int count = 0;
+    bool agree = false;
+    for ( vector<int>::size_type i = 0; i < _connections.size()-1; i++ )
+    {
+        if ( _connections[i]->get_message().compare(_connections[i+1]->get_message()) )
+        {
+            if ((++count/_connections.size() > _quorum_ratio))
+            {
+                agree = true;
+                break;
+            }
+        }
+    }
+    return agree;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+int Server::total_received ( void )
+{
+    int count = 0;
+    for ( vector<int>::size_type i = 0; i < _connections.size(); i++ )
+    {
+        if ( _connections[i]->is_received() )
+        {
+            count++;
+        }
+    }
+    return count;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+std::string Server::self_test ( TestFunctions::TEST_FUNCTIONS CMD, 
+                                 std::vector<std::string>& strs )
+{
+    stringstream ss;
+    string param1 = strs[1], param2 = strs[2], _tmp;
+        
+    switch ( CMD )
+    {
+        case TestFunctions::DO_ADD:
+        {        
+            int value = _tf.do_add(atoi(param1.c_str()), atoi(param2.c_str()));
+            ss << value;
+            _tmp = (ss.str()+"\n");
+        }
+            break;
+        case TestFunctions::DO_STR:
+        {
+            string value = _tf.do_string_cat(param1, param2);
+            _tmp = (value+"\n");
+
+        }
+            break;
+        case TestFunctions::DO_MUL:
+        {
+            int value = _tf.do_multipy(atoi(param1.c_str()), atoi(param2.c_str()));
+            ss << value;
+            _tmp = (ss.str()+"\n");
+        }
+            break;
+        default:;
+            break;
+    }  
+    
+    return _tmp;
+}
+    
