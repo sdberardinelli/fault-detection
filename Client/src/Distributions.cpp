@@ -63,6 +63,17 @@ void Distribution::set_parameters ( valarray<double>& _parameters )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
+valarray<double>& Distribution::get_parameters ( void )
+{
+    return parameters;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
 void Distribution::clear_parameters ( void )
 {
     parameters.resize(0);

@@ -396,15 +396,31 @@ void Client::process_message ( TEST_FUNCTIONS CMD,
                 probability = _dist.gamma();
                 break;
             default:
+                probability = -1.0;
                 break;
         }
         
         if ( double(rand()/double(RAND_MAX)) < probability )
         {
-            if ( double(rand()/double(RAND_MAX)) < 0.51 )
+            if ( rand()/double(RAND_MAX) < 0.51 )
                 param1[rand()%(param1.length()-1)] = modification[rand()%(sizeof(modification)-1)];
             if ( rand()/double(RAND_MAX) < 0.51 )
                 param2[rand()%(param2.length()-1)] = modification[rand()%(sizeof(modification)-1)];
+        }
+        else
+        {
+            valarray<double> parameters = _dist.get_parameters();
+            
+            try
+            {
+                param1[int(parameters[0])] = modification[int(parameters[2])];
+                param2[int(parameters[1])] = modification[int(parameters[2])];
+            }
+            catch ( const out_of_range& oor )
+            {
+                param1[0] = modification[1];
+                param2[0] = modification[1];                
+            }
         }
     }
         

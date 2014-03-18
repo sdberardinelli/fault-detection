@@ -49,7 +49,10 @@ class Distribution
         
         void construct_distributions ( void );
         void set_parameters ( std::valarray<double>& );
+        std::valarray<double>& get_parameters ( void );
         void clear_parameters ( void );
+        
+         
         
         /* variables */
 
