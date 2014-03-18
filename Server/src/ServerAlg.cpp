@@ -82,9 +82,18 @@ bool Server::is_running ( void )
 ********************************************************************************/
 void Server::run ( void )
 {
+    char in;
+    string _message,_self_test_message;    
     do
     {
-        cout << _mp.participant_count() << endl;
+        if ( _mp.participant_count() < 1 )
+            continue;
+        
+        in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
+        _message = construct_job(in);            /* construct message for job */     
+
+        _mp.deliver(_message);
+        
         this_thread::sleep_for (chrono::seconds(1));
     }while(_running);
     

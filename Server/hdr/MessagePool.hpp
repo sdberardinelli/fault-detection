@@ -16,6 +16,7 @@
 #include "Message.hpp"
 #include "typedefs.hpp"
 #include <set>
+#include <string>
 
 /*******************************************************************************
 *                                    DATATYPES
@@ -38,13 +39,15 @@ class MessagePool
         /* constructors */
         MessagePool ( void );
         ~MessagePool ( void );
-
+        
         /* variables */
         
         /* functions */
         void join ( participant_ptr );
         void leave ( participant_ptr );
+        void deliver ( std::string );
         void deliver ( const Message& );
+        void receive ( const Message& );
         int  message_count ( void );
         int  participant_count ( void );
     private:
@@ -53,6 +56,6 @@ class MessagePool
         /* variables */
         enum { max_recent_msgs = 100 };
         std::set<participant_ptr> _participants;
-        message_queue             _recent_msgs;        
+        message_queue             _rcvd_msgs;        
 };
 #endif

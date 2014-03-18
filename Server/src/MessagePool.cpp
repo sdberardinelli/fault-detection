@@ -12,6 +12,11 @@
  ************************************/
 #include "MessagePool.hpp"
 #include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <utility>
+#include <cstring>
+#include <string>
 
 /************************************
  * Namespaces 
@@ -46,7 +51,7 @@ MessagePool::~MessagePool ( void ) { ; }
 void MessagePool::join ( participant_ptr participant )
 {
     _participants.insert(participant);
-    for ( auto msg: _recent_msgs )
+    for ( auto msg: _rcvd_msgs )
     {
         /* send all the recent messages to the receinly joined client */
         participant->deliver(msg);
@@ -70,19 +75,41 @@ void MessagePool::leave ( participant_ptr  participant  )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
+void MessagePool::deliver ( string _msg )
+{
+    Message msg;
+    msg.body_length(strlen(_msg.c_str()));
+    memcpy(msg.body(), _msg.c_str(), msg.body_length());
+    msg.encode_header();  
+    deliver(msg);
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
 void MessagePool::deliver ( const Message& msg )
 {
-    _recent_msgs.push_back(msg);
-    while ( _recent_msgs.size() > max_recent_msgs )
-    {
-        _recent_msgs.pop_front();
-    }
-
     for (auto participant: _participants)
     {
         participant->deliver(msg);
-        
-        cout << msg.data() << endl;
+    }
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void MessagePool::receive ( const Message& msg )
+{
+    _rcvd_msgs.push_back(msg);
+    while ( _rcvd_msgs.size() > max_recent_msgs )
+    {
+        _rcvd_msgs.pop_front();
     }
 }
 /*******************************************************************************
@@ -94,7 +121,7 @@ void MessagePool::deliver ( const Message& msg )
 ********************************************************************************/
 int MessagePool::message_count ( void )
 {
-    return _recent_msgs.size();
+    return _rcvd_msgs.size();
 }
 /*******************************************************************************
 * Function     : 

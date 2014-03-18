@@ -119,8 +119,8 @@ void Connection::do_read_body ( void )
                             [this, self](boost::system::error_code ec, size_t)
                             {
                                 if (!ec)
-                                {
-                                    _mp.deliver(_message);
+                                {                                  
+                                    _mp.receive(_message);
                                     do_read_header();
                                 }
                                 else
