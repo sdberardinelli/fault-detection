@@ -94,7 +94,7 @@ Client::Client ( boost::asio::io_service& io_service ) : _stopped(false),
             }
             
             _dist.set_parameters(parameters);
-            _dist.construct_distributions();
+            _dist.construct_distribution(_dist_type);
         }
         catch(const boost::filesystem::ifstream::failure & ex)
         {
@@ -391,24 +391,7 @@ void Client::process_message ( TEST_FUNCTIONS CMD,
     
     if ( _fault )
     {
-        switch ( _dist_type )
-        {
-            case BETA:
-                probability = _dist.beta();
-                break;
-            case UNIFORM:
-                probability = _dist.uniform();
-                break;
-            case NORMAL:
-                probability = _dist.normal();
-                break;
-            case GAMMA:
-                probability = _dist.gamma();
-                break;
-            default:
-                probability = -1.0;
-                break;
-        }
+        probability = _dist.user_pick(_dist_type);
         
         if ( double(rand()/double(RAND_MAX)) < probability )
         {

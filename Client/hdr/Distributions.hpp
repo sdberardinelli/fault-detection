@@ -73,7 +73,9 @@ class Distribution
         double normal   ( void );
         double gamma    ( void );
         
-        void construct_distributions ( void );
+        bool user_pick ( DISTRIBUTIONS );
+        
+        void construct_distribution ( DISTRIBUTIONS );
         void set_parameters ( std::valarray<double>& );
         std::valarray<double>& get_parameters ( void );
         void clear_parameters ( void );
@@ -86,12 +88,12 @@ class Distribution
         /* functions */
 
         /* variables */        
-        std::valarray<double> parameters;
-        boost::mt19937                                rng;
-        boost::math::beta_distribution<>              _beta;
-        boost::math::uniform_distribution<>           _uniform;
-        boost::math::normal_distribution<>            _normal;
-        boost::gamma_distribution<>                   _gamma;
+        std::valarray<double>                     parameters;
+        boost::mt19937                            rng;
+        boost::math::beta_distribution<>          _beta;
+        boost::math::normal_distribution<>        _normal;
+        boost::math::uniform_distribution<>       _uniform;
+        boost::math::inverse_gamma_distribution<> _inv_gamma;
 };
 }
 #endif
