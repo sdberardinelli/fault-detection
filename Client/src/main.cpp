@@ -13,6 +13,7 @@
 #include "Client.hpp"
 #include <boost/asio.hpp>
 #include <iostream>
+#include <thread>
 
 /************************************
  * Namespaces 
@@ -34,10 +35,10 @@ using boost::asio::ip::tcp;
 int main ( int argc, char* argv[] ) 
 {
     try
-    {
+    {        
         boost::asio::io_service io_service;
         Client c(io_service);
-        io_service.run();
+        c.run();
     }
     catch (std::exception& e)
     {

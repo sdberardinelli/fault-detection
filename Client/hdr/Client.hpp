@@ -15,10 +15,11 @@
 ********************************************************************************/
 #include "TestFunctions.hpp"
 #include "Distributions.hpp"
+#include "Message.hpp"
+#include "typedefs.hpp"
 #include <string>
+#include <thread>
 #include <boost/asio.hpp>
-#include <boost/asio/deadline_timer.hpp>
-#include <boost/asio/streambuf.hpp>
 
 /*******************************************************************************
 *                                    DATATYPES
@@ -31,7 +32,6 @@
 /*******************************************************************************
 *                                    DEFINES
 ********************************************************************************/
-#define HEARTBEAT        0
 #define CONFIG_FILENAME  "config"
 
 /*******************************************************************************
@@ -45,38 +45,37 @@ class Client
         ~Client ( void );
 
         /* functions */
-        void start ( boost::asio::ip::tcp::resolver::iterator );
-        void stop ( void );
-              
+        void write ( const Message& );
+        void close ( void );
+        bool is_connected ( void );
+        void run ( void );
+        
         /* variables */
         
 
     private:
-        /* functions */
-        void start_connect ( boost::asio::ip::tcp::resolver::iterator );
-        void handle_connect ( const boost::system::error_code&,
-                                boost::asio::ip::tcp::resolver::iterator );
-        void start_read ( void );
-        void handle_read (const boost::system::error_code& );
-        void start_write ( void );
-        void handle_write (const boost::system::error_code& );
-        void check_deadline ( void );
+        /* functions */        
+
+        void do_connect ( boost::asio::ip::tcp::resolver::iterator );
+        void do_read_header ( void );
+        void do_read_body ( void );
+        void do_write ( void );
         
-        void process_message ( TestFunctions::TEST_FUNCTIONS, std::vector<std::string>& );
+        // ALGORITHM
+        Message process_message ( TestFunctions::TEST_FUNCTIONS, std::vector<std::string>& );
         
         /* variables */    
+        boost::asio::io_service&     _io_service;
+        boost::asio::ip::tcp::socket _socket;
+        std::thread                  _thread;
+        Message                      _read_msg;
+        message_queue                _write_msgs;
+
+        // ALGORITHM
         bool                          _fault;
         Distributions::Distribution   _dist;
-        Distributions::DISTRIBUTIONS  _dist_type;
-        bool                          _stopped;
-        boost::asio::ip::tcp::socket  _socket;
-        boost::asio::streambuf        _input_buffer;
-        boost::asio::deadline_timer   _deadline;
-#if HEARTBEAT
-        boost::asio::deadline_timer   _heartbeat_timer;
-#else
-        std::string                    _reply_message;
-#endif
+        Distributions::DISTRIBUTIONS  _dist_type;  
         TestFunctions::TestFunction   _tf;
+        std::string                   _reply_message;
 };
 #endif

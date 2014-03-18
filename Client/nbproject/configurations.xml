@@ -6,8 +6,10 @@
                    projectFiles="true">
       <itemPath>hdr/Client.hpp</itemPath>
       <itemPath>hdr/Distributions.hpp</itemPath>
+      <itemPath>hdr/Message.hpp</itemPath>
       <itemPath>hdr/TestFunctions.hpp</itemPath>
       <itemPath>hdr/main.hpp</itemPath>
+      <itemPath>hdr/typedefs.hpp</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -19,8 +21,20 @@
                    projectFiles="true">
       <itemPath>src/Client.cpp</itemPath>
       <itemPath>src/Distributions.cpp</itemPath>
+      <itemPath>src/Message.cpp</itemPath>
       <itemPath>src/TestFunctions.cpp</itemPath>
       <itemPath>src/main.cpp</itemPath>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -44,6 +58,7 @@
       </toolsSet>
       <compileType>
         <ccTool>
+          <standard>8</standard>
           <incDir>
             <pElem>hdr</pElem>
           </incDir>
@@ -65,13 +80,19 @@
       </item>
       <item path="hdr/Distributions.hpp" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="hdr/Message.hpp" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="hdr/TestFunctions.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="hdr/main.hpp" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="hdr/typedefs.hpp" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Client.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Distributions.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Message.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/TestFunctions.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -104,13 +125,19 @@
       </item>
       <item path="hdr/Distributions.hpp" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="hdr/Message.hpp" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="hdr/TestFunctions.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="hdr/main.hpp" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="hdr/typedefs.hpp" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Client.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/Distributions.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="src/Message.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="src/TestFunctions.cpp" ex="false" tool="1" flavor2="0">
       </item>

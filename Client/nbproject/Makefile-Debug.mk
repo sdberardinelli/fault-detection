@@ -37,6 +37,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/src/Client.o \
 	${OBJECTDIR}/src/Distributions.o \
+	${OBJECTDIR}/src/Message.o \
 	${OBJECTDIR}/src/TestFunctions.o \
 	${OBJECTDIR}/src/main.o
 
@@ -68,22 +69,27 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/client: ${OBJECTFILES}
 ${OBJECTDIR}/src/Client.o: src/Client.cpp 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Ihdr -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Client.o src/Client.cpp
+	$(COMPILE.cc) -g -Ihdr -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Client.o src/Client.cpp
 
 ${OBJECTDIR}/src/Distributions.o: src/Distributions.cpp 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Ihdr -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Distributions.o src/Distributions.cpp
+	$(COMPILE.cc) -g -Ihdr -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Distributions.o src/Distributions.cpp
+
+${OBJECTDIR}/src/Message.o: src/Message.cpp 
+	${MKDIR} -p ${OBJECTDIR}/src
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -Ihdr -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/Message.o src/Message.cpp
 
 ${OBJECTDIR}/src/TestFunctions.o: src/TestFunctions.cpp 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Ihdr -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/TestFunctions.o src/TestFunctions.cpp
+	$(COMPILE.cc) -g -Ihdr -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/TestFunctions.o src/TestFunctions.cpp
 
 ${OBJECTDIR}/src/main.o: src/main.cpp 
 	${MKDIR} -p ${OBJECTDIR}/src
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -Ihdr -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/main.o src/main.cpp
+	$(COMPILE.cc) -g -Ihdr -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/src/main.o src/main.cpp
 
 # Subprojects
 .build-subprojects:

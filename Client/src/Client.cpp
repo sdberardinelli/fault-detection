@@ -12,6 +12,7 @@
  ************************************/
 #include "Client.hpp"
 #include "TestFunctions.hpp"
+#include "Message.hpp"
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -26,6 +27,8 @@
 #include <iostream>
 #include <vector>
 #include <valarray>
+#include <thread>
+#include <chrono>
 
 /************************************
  * Namespaces 
@@ -47,15 +50,10 @@ using boost::asio::ip::tcp;
 * Arguments    : 
 * Remarks      : 
 ********************************************************************************/
-Client::Client ( boost::asio::io_service& io_service ) : _stopped(false),
-                                                         _socket(io_service),
-                                                         _deadline(io_service)
-#if HEARTBEAT
-        
-                                                         ,_heartbeat_timer(io_service)
-#endif
+Client::Client ( boost::asio::io_service& io_service ) : _io_service(io_service),
+                                                          _socket(io_service)
 {
-    tcp::resolver r(io_service);
+    tcp::resolver resolver(io_service);
     vector<string> strs;
     valarray<double> parameters;
     std::string str,ip,port; 
@@ -102,8 +100,7 @@ Client::Client ( boost::asio::io_service& io_service ) : _stopped(false),
             _dist_type = NONE;
         }
     }
-
-    this->start(r.resolve(tcp::resolver::query(ip, port)));
+    do_connect(resolver.resolve({ ip, port }));
 }
 /*******************************************************************************
 * Deconstructor: 
@@ -119,18 +116,17 @@ Client::~Client ( void ) { ; }
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Client::start ( tcp::resolver::iterator endpoint_iter )
+void Client::write ( const Message& msg )
 {
-    // Called by the user of the client class to initiate the connection process.
-    // The endpoint iterator will have been obtained using a tcp::resolver.
-    
-    // Start the connect actor.
-    start_connect(endpoint_iter);
-
-    // Start the deadline actor. You will note that we're not setting any
-    // particular deadline here. Instead, the connect and input actors will
-    // update the deadline prior to each asynchronous operation.
-    _deadline.async_wait(boost::bind(&Client::check_deadline, this));
+    _io_service.post([this, msg]()
+                     {
+                         bool write_in_progress = !_write_msgs.empty();
+                         _write_msgs.push_back(msg);
+                         if (!write_in_progress)
+                         {
+                             do_write();
+                         }
+                     });
 }
 /*******************************************************************************
 * Function     : 
@@ -139,17 +135,9 @@ void Client::start ( tcp::resolver::iterator endpoint_iter )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Client::stop ( void )
+void Client::close ( void )
 {
-    // This function terminates all the actors to shut down the connection. It
-    // may be called by the user of the client class, or by the class itself in
-    // response to graceful termination or an unrecoverable error.    
-    _stopped = true;
-    _socket.close();
-    _deadline.cancel();
-#if HEARTBEAT
-    _heartbeat_timer.cancel();
-#endif
+    _io_service.post([this]() { _socket.close(); });
 }
 /*******************************************************************************
 * Function     : 
@@ -158,28 +146,49 @@ void Client::stop ( void )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Client::start_connect ( tcp::resolver::iterator endpoint_iter )
+bool Client::is_connected ( void )
 {
-    if (endpoint_iter != tcp::resolver::iterator())
-    {
-#if DEBUG
-        cout << "Trying " << endpoint_iter->endpoint() << "..." << endl;
-#endif
-        // Set a deadline for the connect operation.
-        _deadline.expires_from_now(boost::posix_time::seconds(60));
+    return _socket.is_open();
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Client::run ( void )
+{
+    thread t([this](){ _io_service.run(); });
 
-        // Start the asynchronous connect operation.
-        _socket.async_connect(endpoint_iter->endpoint(),
-                              boost::bind(&Client::handle_connect,
-                                          this, 
-                                          _1, 
-                                          endpoint_iter));
-    }
-    else
+    char line[Message::max_body_length + 1];
+    while ( is_connected() )
     {
-        // There are no more endpoints to try. Shut down the client.
-        stop();
+        this_thread::sleep_for (chrono::seconds(10));
     }
+
+    close();
+    t.join();
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void Client::do_connect ( tcp::resolver::iterator endpoint_iterator )
+{
+    boost::asio::async_connect(_socket, 
+                               endpoint_iterator,
+                                [this](boost::system::error_code ec, 
+                                       tcp::resolver::iterator)
+                                {
+                                    if (!ec)
+                                    {
+                                        do_read_header();
+                                    }
+                                });
 }
 
 /*******************************************************************************
@@ -189,47 +198,22 @@ void Client::start_connect ( tcp::resolver::iterator endpoint_iter )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Client::handle_connect ( const boost::system::error_code& ec, 
-                              tcp::resolver::iterator endpoint_iter )
+void Client::do_read_header ( void )
 {
-    if (_stopped)
-    {
-        return;
-    }
-
-    // The async_connect() function automatically opens the socket at the start
-    // of the asynchronous operation. If the socket is closed at this time then
-    // the timeout handler must have run first.
-    if ( !_socket.is_open() )
-    {
-      cout << "Connect timed out" << endl;
-
-      // Try the next available endpoint.
-      start_connect(++endpoint_iter);
-    }
-    else if ( ec ) // Check if the connect operation failed before the deadline expired.
-    {
-        cout << "Connect error: " << ec.message() << endl;
-
-        // We need to close the socket used in the previous connection attempt
-        // before starting a new one.
-        _socket.close();
-
-        // Try the next available endpoint.
-        start_connect(++endpoint_iter);
-    }
-    else // Otherwise we have successfully established a connection.
-    {
-#if DEBUG
-        cout << "Connected to " << endpoint_iter->endpoint() << endl;
-#endif
-        // Start the input actor.
-        start_read();
-#if HEARTBEAT
-        // Start the heartbeat actor.
-        start_write();
-#endif
-    }
+    boost::asio::async_read(_socket,
+                            boost::asio::buffer(_read_msg.data(), 
+                                                Message::header_length),
+                            [this](boost::system::error_code ec, size_t )
+                            {
+                                if ( !ec && _read_msg.decode_header() )
+                                {
+                                    do_read_body();
+                                }
+                                else
+                                {
+                                    _socket.close();
+                                }
+                            });
 }
 /*******************************************************************************
 * Function     : 
@@ -238,18 +222,41 @@ void Client::handle_connect ( const boost::system::error_code& ec,
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Client::start_read ( void )
+void Client::do_read_body ( void )
 {
-    // Set a deadline for the read operation.
-    _deadline.expires_from_now(boost::posix_time::seconds(30));
+    boost::asio::async_read(_socket,
+                           boost::asio::buffer(_read_msg.body(), 
+                                               _read_msg.body_length()),
+                           [this](boost::system::error_code ec, size_t )
+                           {
+                               if (!ec)
+                               {
+                                   vector<string> strs;
+                                   string str(_read_msg.body());
+                                   if (!str.empty())
+                                   {   
+                                       Message msg;
+                                       //boost::algorithm::split(strs,str,boost::is_any_of(","));
+                                       //msg = process_message(ToEnum(strs[0].c_str()),strs);
+                                       //write(msg);
+                                       
+                                       
+                                        string _message = "hey, i got it";
 
-    // Start an asynchronous operation to read a newline-delimited message.
-    boost::asio::async_read_until(_socket,
-                                  _input_buffer, 
-                                  '\n',
-                                 boost::bind(&Client::handle_read, 
-                                            this, 
-                                            _1));
+                                        msg.body_length(strlen(_message.c_str()));
+                                        memcpy(msg.body(), _message.c_str(), msg.body_length());
+                                        msg.encode_header();   
+                                        
+                                        write(msg);
+                                   }                
+                                   
+                                   do_read_header();
+                               }
+                               else
+                               {
+                                   _socket.close();
+                               }
+                           });
 }
 /*******************************************************************************
 * Function     : 
@@ -258,61 +265,27 @@ void Client::start_read ( void )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Client::handle_read ( const boost::system::error_code& ec )
+void Client::do_write ( void )
 {
-    if (_stopped)
-    {
-        return;
-    }
-
-    if (!ec)
-    {
-        // Extract the newline-delimited message from the buffer.
-        string line;
-        vector<string> strs;
-        istream is(&_input_buffer);
-        getline(is, line);
-
-        // Empty messages are heartbeats and so ignored.
-        if (!line.empty())
-        {          
-            boost::algorithm::split(strs,line,boost::is_any_of(","));
-            process_message(ToEnum(strs[0].c_str()),strs);
-        }
-        
-        strs.clear();
-    }
-    else
-    {
-        cout << "Error on receive: " << ec.message() << endl;
-
-        stop();
-    }
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-void Client::start_write ( void )
-{
-    if (_stopped)
-    {
-        return;
-    }
-    
-    // Start an asynchronous operation to send a heartbeat message.
     boost::asio::async_write(_socket,
-#if HEARTBEAT
-                             boost::asio::buffer("\n"),
-#else
-                             boost::asio::buffer(_reply_message),
-#endif
-                             boost::bind(&Client::handle_write, 
-                                         this, 
-                                         _1));
+                             boost::asio::buffer(_write_msgs.front().data(),
+                                                 _write_msgs.front().length()),
+                             [this]( boost::system::error_code ec, size_t )
+                             {
+                                 if (!ec)
+                                 {
+                                     cout << "writting" << endl;
+                                     _write_msgs.pop_front();
+                                     if (!_write_msgs.empty())
+                                     {
+                                        do_write();
+                                     }
+                                 }
+                                 else
+                                 {
+                                     _socket.close();
+                                 }
+                            });
 }
 /*******************************************************************************
 * Function     : 
@@ -321,72 +294,12 @@ void Client::start_write ( void )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
-void Client::handle_write (const boost::system::error_code& ec )
-{
-    if (_stopped)
-    {
-        return;
-    }
-
-    if (!ec)
-    {
-#if HEARTBEAT
-        // Wait 10 seconds before sending the next heartbeat.
-        _heartbeat_timer.expires_from_now(boost::posix_time::seconds(10));
-        _heartbeat_timer.async_wait(boost::bind(&Client::start_write, this));
-#endif
-    }
-    else
-    {
-        cout << "Error on heartbeat: " << ec.message() << endl;
-
-        stop();
-    }
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-void Client::check_deadline ( void )
-{
-    if (_stopped)
-    {
-        return;
-    }
-
-    // Check whether the deadline has passed. We compare the deadline against
-    // the current time since a new asynchronous operation may have moved the
-    // deadline before this actor had a chance to run.
-    if (_deadline.expires_at() <= deadline_timer::traits_type::now())
-    {
-        // The deadline has passed. The socket is closed so that any outstanding
-        // asynchronous operations are cancelled.
-        _socket.close();
-
-        // There is no longer an active deadline. The expiry is set to positive
-        // infinity so that the actor takes no action until a new deadline is set.
-        _deadline.expires_at(boost::posix_time::pos_infin);
-    }
-
-    // Put the actor back to sleep.
-    _deadline.async_wait(boost::bind(&Client::check_deadline, this));    
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-void Client::process_message ( TEST_FUNCTIONS CMD,
-                               std::vector<std::string>& strs )
-{
+Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
+{    
     stringstream ss;
+    Message msg;  
     double probability;
-    string param1 = strs[1], param2 = strs[2];
+    string param1 = strs[1], param2 = strs[2], _reply_message;
     static const char modification[] = "0123456789";
     
     if ( _fault )
@@ -444,9 +357,10 @@ void Client::process_message ( TEST_FUNCTIONS CMD,
             break;
     }  
     
+    msg.body_length(strlen(_reply_message.c_str()));
+    memcpy(msg.body(), _reply_message.c_str(), msg.body_length());
+    msg.encode_header();      
+    ss.str(string()); 
     
-    ss.str(string());
-    
-    start_write();
-    start_read();    
+    return msg;
 }
