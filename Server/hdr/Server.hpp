@@ -64,7 +64,6 @@ class Server
         bool        check_fault    ( void );
         std::string self_test      ( TestFunctions::TEST_FUNCTIONS, 
                                      std::vector<std::string>& );
-        int         total_received  ( void );
         
         /* variables */
         bool                              _running;
@@ -77,7 +76,7 @@ class Server
         TestFunctions::TestFunction       _tf;
         Distributions::Distribution       _dist;
         Distributions::DISTRIBUTIONS      _dist_type;
-        Logger                            _log;
+        Logger*                           _log;
         double                            _quorum_ratio;  
         double                            _client_ratio;
         double                            _receive_ratio;

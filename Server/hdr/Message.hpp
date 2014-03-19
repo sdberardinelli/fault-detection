@@ -14,7 +14,7 @@
 *                                   INCLUDES
 ********************************************************************************/
 #include <cstddef>
-
+#include <string>
 /*******************************************************************************
 *                                    DATATYPES
 ********************************************************************************/
@@ -51,6 +51,8 @@ class Message
         void body_length ( std::size_t );
         bool decode_header ( void );
         void encode_header ( void );
+        
+        std::string connection_info;
     private:
         /* functions */
         

@@ -51,11 +51,6 @@ MessagePool::~MessagePool ( void ) { ; }
 void MessagePool::join ( participant_ptr participant )
 {
     _participants.insert(participant);
-    for ( auto msg: _rcvd_msgs )
-    {
-        /* send all the recent messages to the receinly joined client */
-        participant->deliver(msg);
-    }
 }
 /*******************************************************************************
 * Function     : 
@@ -90,11 +85,44 @@ void MessagePool::deliver ( string _msg )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
+void MessagePool::deliver ( string _msg, int i)
+{
+    Message msg;
+    msg.body_length(strlen(_msg.c_str()));
+    memcpy(msg.body(), _msg.c_str(), msg.body_length());
+    msg.encode_header();  
+    deliver(msg, i);
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
 void MessagePool::deliver ( const Message& msg )
 {
     for (auto participant: _participants)
     {
         participant->deliver(msg);
+    }
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+void MessagePool::deliver ( const Message& msg, int i )
+{
+    int itr = 0;
+    for (auto participant: _participants)
+    {
+        if ( itr++ == i)
+        {
+            participant->deliver(msg);
+        }
     }
 }
 /*******************************************************************************
@@ -141,3 +169,53 @@ int MessagePool::participant_count ( void )
 * Returns      : 
 * Remarks      : 
 ********************************************************************************/
+void MessagePool::reset ( void )
+{
+    _rcvd_msgs.clear();
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+string MessagePool::get_next_msg ( void )
+{
+    string str = "";
+    Message msg;
+    if ( !_rcvd_msgs.empty() )
+    {
+        msg = _rcvd_msgs.back();
+        _rcvd_msgs.pop_back();
+        
+        char * data = msg.body();
+        for ( int i = 0; i < msg.body_length(); i++ )
+        {
+            str += data[i];
+        }
+    }
+    
+    return str;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+string MessagePool::get_msg_at ( int idx )
+{
+    string str = "";
+    Message msg = _rcvd_msgs.at(idx);        
+    char * data = msg.body();
+    for ( int i = 0; i < msg.body_length(); i++ )
+    {
+        str += data[i];
+        if (data[i] == '\n')
+            break;
+    }
+    
+    return str;
+}

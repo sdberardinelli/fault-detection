@@ -88,7 +88,9 @@ Server::Server ( boost::asio::io_service& io,
             
             getline(file_in, str);
             boost::algorithm::split(strs,str,boost::is_any_of("="));
-            _timeout = atoi(strs[1].c_str());            
+            _timeout = atoi(strs[1].c_str());  
+            
+            _log = new Logger(true,false);
         }
         catch(const boost::filesystem::ifstream::failure & ex)
         {

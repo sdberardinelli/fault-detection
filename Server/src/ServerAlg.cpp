@@ -83,85 +83,72 @@ bool Server::is_running ( void )
 void Server::run ( void )
 {
     char in;
-    string _message,_self_test_message;    
+    string _message;
+    int timeout;
+    int accept_count = 0;
+    int self_accept_count = 0;
     do
     {
+Begin:
         if ( _mp.participant_count() < 1 )
             continue;
         
         in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
         _message = construct_job(in);            /* construct message for job */     
-
-        _mp.deliver(_message);
+        send_jobs(_message);                     /* send job to n clients     */
         
-        this_thread::sleep_for (chrono::seconds(1));
+        timeout = 0;
+        
+        do                                       /* wait until msgs are rcvd  */
+        {
+            this_thread::sleep_for (chrono::seconds(1));
+           
+            if ( _mp.participant_count() == 0 )
+                continue;
+
+            _receive_ratio = _mp.message_count()*1.0/_mp.participant_count()*1.0;            
+            if (timeout++ >= _timeout)
+            {
+                timeout = 0;
+                cout << "timeout"<< endl;
+                _mp.reset();
+                goto Begin;
+            }
+            
+        } while ( _receive_ratio < _client_ratio );
+        
+        if ( check_fault() )                   /* check the majority         */
+        {
+            /* quorum agree */
+            accept_count++;
+        }
+        else
+        {
+            /* quorum disagree: fault */ 
+            cout << accept_count << "," << self_accept_count << ",1" << endl;
+            accept_count = 0;
+        }
+        
+        if ( rand()/double(RAND_MAX) < _dist.uniform() )
+        {
+            vector<string> strs;
+            boost::algorithm::split(strs,_message,boost::is_any_of(","));
+            string _self_test_message = self_test(ToEnum(strs[0].c_str()),strs);
+            if ( _self_test_message.compare(_mp.get_msg_at(rand()%(_mp.message_count()-1))) == 0 )
+            {
+                self_accept_count++;
+            }
+            else
+            {
+                cout << accept_count << "," << self_accept_count << ",2" << endl;
+                self_accept_count = 0;
+            }
+        }   
+        
+        cout << accept_count << "," << self_accept_count << ",2" << endl;
+        
+        _mp.reset();        
     }while(_running);
-    
-//    int timeout;
-//    char in;
-//    string _message,_self_test_message;
-//    
-//    do 
-//    {  
-//        if ( _connections.size() == 0 )
-//            continue;
-//        
-//        in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
-//        _message = construct_job(in);            /* construct message for job */
-//        send_jobs(_message);                     /* send job to n clients     */
-//        try
-//        {
-//            timeout = 0;                         /* wait until quorum ratio   */
-//            do                                   /* or a timeout of 1 second  */
-//            {
-//                if ( _connections.size() == 0 )
-//                    break;
-//                
-//                _receive_ratio = total_received()/_connections.size();
-//                boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-//            }while ( _receive_ratio <= _client_ratio && timeout++ < _timeout*3000 );
-//            
-//            if ( timeout > 3000 )
-//            {
-//                cout << "query timeout" << endl;
-//                continue;
-//            }
-//        }
-//        catch(boost::thread_interrupted&)
-//        {
-//            cout << "Thread is stopped" << endl;
-//            break;
-//        }  
-//        
-//        if ( check_fault() )
-//        {
-//            /* quorum agree */
-//            cout << "answer is accepted" << endl;
-//        }
-//        else
-//        {
-//            /* quorum disagree: fault */
-//             cout << "answer is NOT accepted" << endl;
-//        }
-//        
-//        if ( rand()/double(RAND_MAX) < _dist.uniform() )
-//        {
-//            vector<string> strs;
-//            boost::algorithm::split(strs,_message,boost::is_any_of(","));
-//            _self_test_message = self_test(ToEnum(strs[0].c_str()),strs);
-//            
-//            
-//            if ( _self_test_message.compare(_connections[0]->get_message()) == 0 )
-//            {
-//                cout << "answer is accepted" << endl;
-//            }
-//            else
-//            {
-//                 cout << "answer is NOT accepted" << endl;
-//            }
-//        }        
-//        
-//    }while ( _running );
 }
 /*******************************************************************************
 * Function     : 
@@ -237,39 +224,13 @@ string Server::construct_job ( char in )
 ********************************************************************************/
 void Server::send_jobs ( string _message )
 {
-//    for ( vector<int>::size_type i = 0; i < _connections.size(); i++ )
-//    {
-//        if ( _connections[i]->is_connected() )
-//        {   
-//            _connections[i]->set_received(false);
-//                    
-//            if ( _dist.user_pick(_dist_type) ) 
-//            {
-//                _connections[i]->start_write(_message);                
-//                _message.erase(remove(_message.begin(), 
-//                                      _message.end(), 
-//                                      '\n'), 
-//                                      _message.end());            
-//                cout << "Sending \"" << _message
-//                                      << "\" to " 
-//                                      << _connections[i]->get_connection_info() 
-//                                      << endl << endl;
-//            }
-//            else
-//            {
-//                ;
-//            }
-//        }
-//        else
-//        {
-//            if ( _connections.size() > 1 )
-//                swap(_connections[i], _connections.back());
-//            _connections.pop_back();
-//            
-//            if ( _connections.size() == 0 )
-//                break;
-//        }
-//    }    
+    for ( vector<int>::size_type i = 0; i < _mp.participant_count(); i++ )
+    {
+        if ( _dist.user_pick(_dist_type) )
+        {
+            _mp.deliver(_message, i);
+        }
+    }
 }
 /*******************************************************************************
 * Function     : 
@@ -282,37 +243,22 @@ bool Server::check_fault ( void )
 {
     int count = 0;
     bool agree = false;
-//    for ( vector<int>::size_type i = 0; i < _connections.size()-1; i++ )
-//    {
-//        if ( _connections[i]->get_message().compare(_connections[i+1]->get_message()) )
-//        {
-//            if ((++count/_connections.size() > _quorum_ratio))
-//            {
-//                agree = true;
-//                break;
-//            }
-//        }
-//    }
+  
+    if ( double(_mp.message_count())/double(_mp.participant_count())  > _client_ratio )
+    {
+        for ( vector<int>::size_type i = 0; i < _mp.message_count()-1; i++ )
+        {
+            if ( _mp.get_msg_at(i).compare(_mp.get_msg_at(i+1)) == 0 )
+            {
+                if ( (double(++count)/double(_mp.message_count())) > _quorum_ratio)
+                {
+                    agree = true;
+                    break;
+                }
+            }
+        }
+    }
     return agree;
-}
-/*******************************************************************************
-* Function     : 
-* Description  : 
-* Arguments    : 
-* Returns      : 
-* Remarks      : 
-********************************************************************************/
-int Server::total_received ( void )
-{
-    int count = 0;
-//    for ( vector<int>::size_type i = 0; i < _connections.size(); i++ )
-//    {
-//        if ( _connections[i]->is_received() )
-//        {
-//            count++;
-//        }
-//    }
-    return count;
 }
 /*******************************************************************************
 * Function     : 
@@ -333,13 +279,13 @@ std::string Server::self_test ( TestFunctions::TEST_FUNCTIONS CMD,
         {        
             int value = _tf.do_add(atoi(param1.c_str()), atoi(param2.c_str()));
             ss << value;
-            _tmp = (ss.str()+"\n");
+            _tmp = ss.str();
         }
             break;
         case TestFunctions::DO_STR:
         {
             string value = _tf.do_string_cat(param1, param2);
-            _tmp = (value+"\n");
+            _tmp = value;
 
         }
             break;
@@ -347,7 +293,7 @@ std::string Server::self_test ( TestFunctions::TEST_FUNCTIONS CMD,
         {
             int value = _tf.do_multipy(atoi(param1.c_str()), atoi(param2.c_str()));
             ss << value;
-            _tmp = (ss.str()+"\n");
+            _tmp = ss.str();
         }
             break;
         default:;
