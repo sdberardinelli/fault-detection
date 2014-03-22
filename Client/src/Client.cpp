@@ -292,17 +292,8 @@ Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
     static const char modification[] = "0123456789";
     
     if ( _fault )
-    {
-        probability = _dist.user_pick(_dist_type);
-        
-        if ( double(rand()/double(RAND_MAX)) < probability )
-        {
-            if ( rand()/double(RAND_MAX) < 0.51 )
-                param1[rand()%(param1.length()-1)] = modification[rand()%(sizeof(modification)-1)];
-            if ( rand()/double(RAND_MAX) < 0.51 )
-                param2[rand()%(param2.length()-1)] = modification[rand()%(sizeof(modification)-1)];
-        }
-        else
+    {        
+        if ( _dist_type == Distributions::NONE )
         {
             valarray<double> parameters = _dist.get_parameters();
             
@@ -315,7 +306,15 @@ Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
             {
                 param1[0] = modification[1];
                 param2[0] = modification[1];                
-            }
+            }            
+        }
+        else
+        {
+            if (_dist.user_pick(_dist_type) )
+            {
+                param1[rand()%(param1.length()-1)] = modification[rand()%(sizeof(modification)-1)];
+                param2[rand()%(param2.length()-1)] = modification[rand()%(sizeof(modification)-1)];
+            }      
         }
     }
         

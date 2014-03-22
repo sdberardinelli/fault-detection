@@ -129,7 +129,7 @@ Begin:
             accept_count = 0;
         }
         
-        if ( rand()/double(RAND_MAX) < _dist.uniform() )
+        if (  _dist.user_pick(_dist_type) )
         {
             vector<string> strs;
             boost::algorithm::split(strs,_message,boost::is_any_of(","));
@@ -243,20 +243,42 @@ bool Server::check_fault ( void )
 {
     int count = 0;
     bool agree = false;
-  
+    
     if ( double(_mp.message_count())/double(_mp.participant_count())  > _client_ratio )
     {
-        for ( vector<int>::size_type i = 0; i < _mp.message_count()-1; i++ )
+        
+        string test_string = _mp.get_msg_at(0);
+        vector<string> a;
+        a.push_back(test_string);
+        _quorum.push_back(a);
+        
+        
+        for ( vector<int>::size_type i = 1; i < _mp.message_count(); i++ )
         {
-            if ( _mp.get_msg_at(i).compare(_mp.get_msg_at(i+1)) == 0 )
+            test_string = _mp.get_msg_at(i);
+
+            for ( vector<int>::size_type j = 0; j < _quorum.size(); j++ )
             {
-                if ( (double(++count)/double(_mp.message_count())) > _quorum_ratio)
+                if ( test_string.compare(_quorum[i][0]) )
                 {
-                    agree = true;
-                    break;
+                    _quorum[i].push_back(test_string);
+                }
+                else
+                {
+                     vector<string> b;
+                     
+                     b.push_back(test_string);
+                     
+                     _quorum.push_back(b);
                 }
             }
         }
+        
+            for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
+            {
+                cout << _quorum[i].size() << " " << _quorum[i][0] << endl;
+            }        
+        
     }
     return agree;
 }
