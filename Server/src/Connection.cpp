@@ -38,7 +38,7 @@ Connection::Connection ( boost::asio::ip::tcp::socket _in_socket,
                           MessagePool& _in_mp )  : _socket(move(_in_socket)), 
                                                    _mp(_in_mp)
 {
-    //cout << get_connection_info() << " connected" << endl;
+    cout << get_connection_info() << " connected" << endl;
 }
 /*******************************************************************************
 * Deconstructor: 
@@ -48,7 +48,7 @@ Connection::Connection ( boost::asio::ip::tcp::socket _in_socket,
 ********************************************************************************/
 Connection::~Connection ( void )
 { 
-    //cout << get_connection_info() << " disonnected" << endl;
+    cout << get_connection_info() << " disonnected" << endl;
     _socket.close();
 }
 /*******************************************************************************

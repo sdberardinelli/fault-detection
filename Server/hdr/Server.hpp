@@ -57,7 +57,7 @@ class Server
     private:
         /* functions */
         void start_accept ( void );
-                
+        
         // ALGORITHM
         std::string construct_job ( char );
         void        send_jobs      ( std::string );
@@ -72,11 +72,14 @@ class Server
         boost::asio::ip::tcp::socket      _socket;
         MessagePool                       _mp;
         
-        std::vector< std::vector<std::string> > _quorum;
+        std::vector< std::vector<std::string> * > _quorum;
+        int                                       _quorum_index;
         // ALGORITHM
         TestFunctions::TestFunction       _tf;
         Distributions::Distribution       _dist;
         Distributions::DISTRIBUTIONS      _dist_type;
+        Distributions::Distribution       _sending_dist;
+        Distributions::DISTRIBUTIONS      _sending_dist_type;        
         Logger*                           _log;
         double                            _quorum_ratio;  
         double                            _client_ratio;

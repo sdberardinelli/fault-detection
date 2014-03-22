@@ -87,11 +87,21 @@ void Server::run ( void )
     int timeout;
     int accept_count = 0;
     int self_accept_count = 0;
+    
+    vector<string> message_pool;
     do
     {
 Begin:
         if ( _mp.participant_count() < 1 )
             continue;
+
+        for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
+        {
+            _quorum[i]->clear();
+        }
+        _quorum_index = 0;
+        _quorum.clear();
+        _mp.reset(); 
         
         in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
         _message = construct_job(in);            /* construct message for job */     
@@ -110,8 +120,6 @@ Begin:
             if (timeout++ >= _timeout)
             {
                 timeout = 0;
-                cout << "timeout"<< endl;
-                _mp.reset();
                 goto Begin;
             }
             
@@ -125,29 +133,58 @@ Begin:
         else
         {
             /* quorum disagree: fault */ 
-            cout << accept_count << "," << self_accept_count << ",1" << endl;
+            cout << "quorum did not agree" << endl;
             accept_count = 0;
         }
         
         if (  _dist.user_pick(_dist_type) )
         {
+            cout << "checking";
             vector<string> strs;
             boost::algorithm::split(strs,_message,boost::is_any_of(","));
             string _self_test_message = self_test(ToEnum(strs[0].c_str()),strs);
-            if ( _self_test_message.compare(_mp.get_msg_at(rand()%(_mp.message_count()-1))) == 0 )
+            if ( _self_test_message.compare(_mp.get_msg_at(_quorum_index)) == 0 )
             {
                 self_accept_count++;
+                cout << endl;
             }
             else
             {
-                cout << accept_count << "," << self_accept_count << ",2" << endl;
+                cout << ", server check not agree" << endl;
                 self_accept_count = 0;
             }
         }   
         
-        cout << accept_count << "," << self_accept_count << ",2" << endl;
+        cout << accept_count << "," << self_accept_count << endl;
         
-        _mp.reset();        
+        
+        vector<string> strs1;
+        boost::algorithm::split(strs1,_message,boost::is_any_of(","));
+        string _self_test_message1 = self_test(ToEnum(strs1[0].c_str()),strs1);
+        
+        if ( _self_test_message1.compare(_mp.get_msg_at(_quorum_index)) == 0 )
+        {
+            cout << "quorum was correct" << endl;
+        }
+        else
+        {
+            
+            cout << "actual: " << _self_test_message1 << endl;
+            cout << "quorum: " << _mp.get_msg_at(_quorum_index) << endl;
+            cout << "quorum was incorrect" << endl;
+            
+//            for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
+//            {
+//                cout << i << ": ";
+//                for ( vector<int>::size_type j = 0; i < _quorum[i]->size(); j++ )
+//                {
+//                    cout << _quorum[i]->at(j) << ",";
+//                }
+//                cout << endl;
+//            }
+//            
+//            getchar();
+        }
     }while(_running);
 }
 /*******************************************************************************
@@ -224,12 +261,30 @@ string Server::construct_job ( char in )
 ********************************************************************************/
 void Server::send_jobs ( string _message )
 {
+    vector<int> indecies;
+    
+Retry:   
     for ( vector<int>::size_type i = 0; i < _mp.participant_count(); i++ )
     {
-        if ( _dist.user_pick(_dist_type) )
+        if ( _sending_dist.user_pick(_sending_dist_type) )
         {
-            _mp.deliver(_message, i);
+            indecies.push_back(i);
         }
+        
+        if ( double(indecies.size())/double(_mp.participant_count()) >= _client_ratio )
+        {
+            break;
+        }
+    }
+    
+    if ( double(indecies.size())/double(_mp.participant_count()) < _client_ratio )
+    {
+        indecies.clear();
+        goto Retry;
+    }
+    for ( vector<int>::size_type i = 0; i < indecies.size(); i++ )
+    {
+        _mp.deliver(_message, indecies[i]);
     }
 }
 /*******************************************************************************
@@ -241,45 +296,46 @@ void Server::send_jobs ( string _message )
 ********************************************************************************/
 bool Server::check_fault ( void )
 {
-    int count = 0;
+    _quorum_index = 0;
     bool agree = false;
     
-    if ( double(_mp.message_count())/double(_mp.participant_count())  > _client_ratio )
+    if ( double(_mp.message_count())/double(_mp.participant_count())  >= _client_ratio )
     {
-        
         string test_string = _mp.get_msg_at(0);
-        vector<string> a;
-        a.push_back(test_string);
-        _quorum.push_back(a);
-        
-        
+        _quorum.push_back(new vector<string>());
+        _quorum[0]->push_back(test_string);
         for ( vector<int>::size_type i = 1; i < _mp.message_count(); i++ )
         {
             test_string = _mp.get_msg_at(i);
-
             for ( vector<int>::size_type j = 0; j < _quorum.size(); j++ )
             {
-                if ( test_string.compare(_quorum[i][0]) )
+                if ( test_string.compare(_quorum[j]->at(0)) == 0 )
                 {
-                    _quorum[i].push_back(test_string);
+                    _quorum[j]->push_back(test_string);
                 }
                 else
                 {
-                     vector<string> b;
-                     
-                     b.push_back(test_string);
-                     
-                     _quorum.push_back(b);
+                    _quorum.push_back(new vector<string>());
+                    _quorum[j+1]->push_back(test_string);
+                    break;
                 }
+                
             }
         }
         
-            for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
+        int largest = -1;
+        for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
+        {
+            if ( largest > _quorum[i]->size() && 
+                double(_quorum[i]->size())/_mp.message_count() > _quorum_ratio )
             {
-                cout << _quorum[i].size() << " " << _quorum[i][0] << endl;
-            }        
-        
+                _quorum_index = i;
+                largest = _quorum[i]->size();
+                agree = true;
+            }
+        }
     }
+    
     return agree;
 }
 /*******************************************************************************

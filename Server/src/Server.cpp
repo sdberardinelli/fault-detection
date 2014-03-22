@@ -77,6 +77,22 @@ Server::Server ( boost::asio::io_service& io,
             
             _dist.set_parameters(parameters);
             _dist.construct_distribution(_dist_type);
+            
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _sending_dist_type = DistToEnum(strs[1].c_str());
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            boost::algorithm::split(strs,strs[1],boost::is_any_of(","));
+            
+            parameters.resize(strs.size());
+            for ( vector<int>::size_type i = 0; i != strs.size(); i++ )
+            {
+                parameters[i] = atof(strs[i].c_str());
+            }
+            
+            _sending_dist.set_parameters(parameters);
+            _sending_dist.construct_distribution(_sending_dist_type);            
            
             getline(file_in, str);
             boost::algorithm::split(strs,str,boost::is_any_of("="));
