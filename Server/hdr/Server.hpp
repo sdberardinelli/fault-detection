@@ -72,6 +72,7 @@ class Server
         boost::asio::ip::tcp::socket      _socket;
         MessagePool                       _mp;
         
+        std::vector< std::vector<int> * >         _indecies;
         std::vector< std::vector<std::string> * > _quorum;
         int                                       _quorum_index;
         // ALGORITHM

@@ -55,6 +55,7 @@ class MessagePool
         void reset ( void );
         std::string get_next_msg ( void );
         std::string get_msg_at ( int );
+        std::string get_participant_info ( int );
     private:
         /* functions */
         

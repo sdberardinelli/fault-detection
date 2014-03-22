@@ -208,13 +208,49 @@ string MessagePool::get_next_msg ( void )
 string MessagePool::get_msg_at ( int idx )
 {
     string str = "";
-    Message msg = _rcvd_msgs.at(idx);        
-    char * data = msg.body();
-    for ( int i = 0; i < msg.body_length(); i++ )
+    try
     {
-        str += data[i];
-        if (data[i] == '\n')
-            break;
+        Message msg = _rcvd_msgs.at(idx);        
+        char * data = msg.body();
+        for ( int i = 0; i < msg.body_length(); i++ )
+        {
+            str += data[i];
+            if (data[i] == '\n')
+                break;
+        }
+    }
+    catch ( const out_of_range& oor )
+    {
+        str = "1";
+#if DEBUG
+         cerr << "Out of Range error: " << oor.what() << endl;
+#endif
+    }
+    
+    return str;
+}
+/*******************************************************************************
+* Function     : 
+* Description  : 
+* Arguments    : 
+* Returns      : 
+* Remarks      : 
+********************************************************************************/
+string MessagePool::get_participant_info ( int idx )
+{
+    string str = "";
+    try
+    {
+        Message msg = _rcvd_msgs.at(idx);
+        
+        str = msg.connection_info;
+    }
+    catch ( const out_of_range& oor )
+    {
+        str = "1";
+#if DEBUG
+         cerr << "Out of Range error: " << oor.what() << endl;
+#endif         
     }
     
     return str;
