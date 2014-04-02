@@ -86,5 +86,15 @@ class Server
         double                            _client_ratio;
         double                            _receive_ratio;
         int                               _timeout;
+        int                               _trials;
+        std::string                       _experiement;
+        
+        int                               _total_job_count;
+        int                               _quorum_incorrect_count;
+        int                               _server_check_count;  
+        
+        int                               _quorum_agree_count;
+        int                               _quorum_disagree_count;
+        int                               _quorum_correct_count;      
 };
 #endif

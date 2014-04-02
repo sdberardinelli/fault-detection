@@ -83,131 +83,148 @@ bool Server::is_running ( void )
 void Server::run ( void )
 {
     char in;
-    string _message;
+    string message;
     int timeout;
-    int accept_count = 0;
-    int self_accept_count = 0;
     bool quorum_agree;
+    bool server_check;
+    ostringstream ostream_string;
     
-    do
+//    do
+//    {
+//        cin >> in;
+//        cout << "connected clients: " << _mp.participant_count() << endl;
+//    }while ( in != 's' );
+    
+    
+    for ( int trials = 0; trials < _trials; trials++ )
     {
+        cout << "starting trial " << trials << endl;
+        _total_job_count        = 0;
+        _quorum_incorrect_count = 0;
+        _server_check_count     = 0;
+        _quorum_agree_count     = 0;
+        _quorum_disagree_count  = 0;
+        _quorum_correct_count   = 0;        
+        server_check = true;
+        
+        do
+        {
 Begin:
 
-        cout << endl << endl;
-        if ( _mp.participant_count() < 1 )
-            continue;
-
-        for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
-        {
-            _quorum[i]->clear();
-        }
-        _quorum_index = 0;
-        _quorum.clear();
-        
-        for ( vector<int>::size_type i = 0; i < _indecies.size(); i++ )
-        {
-            _indecies[i]->clear();
-        }        
-        _indecies.clear();
-        _mp.reset(); 
-        
-        in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
-        _message = construct_job(in);            /* construct message for job */   
-        send_jobs(_message);                     /* send job to n clients     */
-        
-        timeout = 0;
-        
-        do                                       /* wait until msgs are rcvd  */
-        {
-            this_thread::sleep_for (chrono::seconds(1));
-           
-            if ( _mp.participant_count() == 0 )
+            if ( _mp.participant_count() < 1 )
                 continue;
 
-            _receive_ratio = _mp.message_count()*1.0/_mp.participant_count()*1.0;     
-            if (timeout++ >= _timeout)
+            for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
             {
-                timeout = 0;
-                goto Begin;
+                _quorum[i]->clear();
             }
-            
-        } while ( _receive_ratio < _client_ratio );
-        
-        if ( check_fault() )                   /* check the majority         */
-        {
-            /* quorum agree */
-            accept_count++;
-            quorum_agree = true;
-        }
-        else
-        {
-            /* quorum disagree: fault */ 
-            cout << "quorum did not agree" << endl;
-            quorum_agree = false;
-            accept_count = 0;
-        }
-        
-        if ( quorum_agree )
-        {       
-        
-            if (  _dist.user_pick(_dist_type) )
+            _quorum_index = 0;
+            _quorum.clear();
+
+            for ( vector<int>::size_type i = 0; i < _indecies.size(); i++ )
             {
-                cout << "checking";
-                vector<string> strs;
-                boost::algorithm::split(strs,_message,boost::is_any_of(","));
-                string _self_test_message = self_test(ToEnum(strs[0].c_str()),strs);
-                if ( _self_test_message.compare(_mp.get_msg_at(_quorum_index)) == 0 )
-                {
-                    self_accept_count++;
-                    cout << endl;
-                }
-                else
-                {
-                    cout << ", server check not agree" << endl;
-                    self_accept_count = 0;
-                }
-            }   
+                _indecies[i]->clear();
+            }        
+            _indecies.clear();
+            _mp.reset(); 
 
-            cout << accept_count << "," << self_accept_count << endl;
+            in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
+            message = construct_job(in);             /* construct message for job */   
+            send_jobs(message);                      /* send job to n clients     */
 
+            timeout = 0;
 
-            vector<string> strs1;
-            boost::algorithm::split(strs1,_message,boost::is_any_of(","));
-            string _self_test_message1 = self_test(ToEnum(strs1[0].c_str()),strs1);
-        
-            if ( _self_test_message1.compare(_mp.get_msg_at(_quorum_index)) == 0 )
+            do                                       /* wait until msgs are rcvd  */
             {
-                cout << "quorum was correct" << endl;
+                this_thread::sleep_for (chrono::seconds(1));
+
+                if ( _mp.participant_count() == 0 )
+                    continue;
+
+                _receive_ratio = _mp.message_count()*1.0/_mp.participant_count()*1.0;     
+                if (timeout++ >= _timeout)
+                {
+                    timeout = 0;
+                    cout << "timeout"<< endl;
+                    goto Begin;
+                }
+
+            } while ( _receive_ratio < _client_ratio );
+
+            if ( check_fault() )                   /* check the majority         */
+            {
+                quorum_agree = true;
             }
             else
             {
+                quorum_agree = false;
+            }
 
-                cout << "actual: " << _self_test_message1 << endl;
-                cout << "quorum: " << _mp.get_msg_at(_quorum_index) << endl;
-                cout << "quorum was incorrect" << endl;
-
-                for ( vector<int>::size_type i = 0; i < _quorum.size(); i++ )
+            if ( quorum_agree )
+            {       
+                cout << "quorum agree" << endl;
+                _quorum_agree_count++;
+                
+                if (  _dist.user_pick(_dist_type) ) /* server check */
                 {
-                    cout << i << ": ";
-                    try
+                    _server_check_count++;
+                    cout << "server checking: ";
+                    
+                    vector<string> strs;
+                    boost::algorithm::split(strs,message,boost::is_any_of(","));
+                    string _self_test_message = self_test(ToEnum(strs[0].c_str()),strs);
+                    if ( _self_test_message.compare(_mp.get_msg_at(_quorum_index)) != 0 )
                     {
-                        for ( vector<int>::size_type j = 0; j < _quorum[i]->size(); j++ )
-                        {
-                            cout << _quorum[i]->at(j) << "(" << _mp.get_participant_info(_indecies[i]->at(j)) << "),";
-                        }
+                       server_check = false;
+                       cout << " quorum was incorrect" << endl;
                     }
-                    catch ( const out_of_range & oor )
+                    else
                     {
-                        cout <<" out of range ";
+                        cout << " quorum was correct" << endl;
                     }
-                    cout << endl;
                 }
 
-                getchar();
+                vector<string> strs1;
+                boost::algorithm::split(strs1,message,boost::is_any_of(","));
+                string _self_test_message1 = self_test(ToEnum(strs1[0].c_str()),strs1);
+
+                if ( _self_test_message1.compare(_mp.get_msg_at(_quorum_index)) == 0 )
+                {
+                    _quorum_correct_count++;
+                    cout << "quorum was correct" << endl;
+                }
+                else
+                {
+                    _quorum_incorrect_count++;
+                    cout << "quorum was incorrect" << endl;
+                }
             }
-        }
+            else
+            {
+                _quorum_disagree_count++;
+                cout << "quorum did not agree" << endl;
+            }
+
+            if (!_running)
+            {
+                return;
+            }
+        }while(server_check);
         
-    }while(_running);
+        cout << "end of trial " << trials << endl;
+        
+        
+	ostream_string << _mp.participant_count() << ","
+                       << _total_job_count << ","
+                       << _quorum_incorrect_count << ","
+                       << _server_check_count << ","
+                       << _quorum_agree_count << ","
+                       << _quorum_disagree_count << ","
+                       << _quorum_correct_count;
+        cout << "result: " << ostream_string.str() << endl;
+        cout << endl << endl;
+        _log->log("output", _experiement, ostream_string.str());
+    }
 }
 /*******************************************************************************
 * Function     : 
@@ -284,29 +301,39 @@ string Server::construct_job ( char in )
 void Server::send_jobs ( string _message )
 {
     vector<int> indecies;
+    bool got_jobs = false;
   
-    for ( vector<int>::size_type i = 0; i < _mp.participant_count(); i++ )
-    {
-        if ( _sending_dist.user_pick(_sending_dist_type) )
-        {
-            indecies.push_back(i);
-        }
-        
-        if ( double(indecies.size())/double(_mp.participant_count()) >= _client_ratio )
-        {
-            break;
-        }
-    }
+    cout << "sending jobs: ";
     
-    if ( double(indecies.size())/double(_mp.participant_count()) < _client_ratio )
+    do
     {
-        indecies.clear();
-    }
+        for ( vector<int>::size_type i = 0; i < _mp.participant_count(); i++ )
+        {
+            if ( _sending_dist.user_pick(_sending_dist_type) )
+            {
+                indecies.push_back(i);
+            }
+
+            if ( double(indecies.size())/double(_mp.participant_count()) >= _client_ratio )
+            {
+                got_jobs = true;
+                break;
+            }
+        }
+    
+        if ( double(indecies.size())/double(_mp.participant_count()) < _client_ratio )
+        {
+            indecies.clear();
+        }
+    }while (!got_jobs);
     
     for ( vector<int>::size_type i = 0; i < indecies.size(); i++ )
     {
+        _total_job_count++;
+        cout << indecies[i] << ",";
         _mp.deliver(_message, indecies[i]);
     }
+    cout << "(" << _total_job_count << ")" << endl;
 }
 /*******************************************************************************
 * Function     : 

@@ -1,7 +1,9 @@
 distribution=uniform
 parameters=0,1,0.1
 distribution=uniform
-parameters=0,1,0.5
+parameters=0,1,0.01
 quorum=0.5
-client=0.3
+client=0.1
 timeout=1
+trials=100
+experiment=1

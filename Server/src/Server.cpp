@@ -47,7 +47,7 @@ Server::Server ( boost::asio::io_service& io,
                                                                     _socket(io)
 {
     srand (time(NULL));
-
+    
     vector<string> strs;
     valarray<double> parameters;
     std::string str; 
@@ -105,6 +105,14 @@ Server::Server ( boost::asio::io_service& io,
             getline(file_in, str);
             boost::algorithm::split(strs,str,boost::is_any_of("="));
             _timeout = atoi(strs[1].c_str());  
+            
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _trials = atoi(strs[1].c_str());
+            
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _experiement = strs[1] + ".csv";
             
             _log = new Logger(true,false);
         }
