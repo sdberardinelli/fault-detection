@@ -8,6 +8,7 @@ fault=(true or false)
 distribution=(uniform,normal,gamma,beta,none) distribution=none ^ faul=true => param1,param2 are indices of fault
 parameters=(param1,param2,probability)
 
+
 server config:
 distribution=(uniform,normal,gamma,beta,none) distrubution used for checking qurorm
 parameters=(param1,param2,probability)
@@ -18,6 +19,7 @@ client=(0 to 1) ratio for number of clients receive a job
 timeout=(n) number of seconds to wait before the next job is sent/processed
 trials=(n) number of trails, a trail is defined as a server checking the quorom and it is incorrect
 experiment=(n) name/index of the experiement
+
 
 output (for each trial)
 1. # of jobs sent out.
