@@ -45,6 +45,6 @@ output (for each trial)
 1. # of jobs sent out.
 2. # of incorrect answers accepted.
 3. # of times server checked the answer
-4. # of times the quorom agreed
-5. # of times the quorom disagreed
-6. # of times teh quorom was correct
+4. # of times the quorum agreed
+5. # of times the quorum disagreed
+6. # of times the quorum was correct
