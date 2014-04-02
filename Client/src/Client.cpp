@@ -287,7 +287,6 @@ Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
 {    
     stringstream ss;
     Message msg;  
-    double probability;
     string param1 = strs[1], param2 = strs[2], _reply_message;
     static const char modification[] = "0123456789";
     

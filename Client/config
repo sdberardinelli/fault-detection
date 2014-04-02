@@ -1,5 +1,5 @@
-ip=10.0.0.11
+ip=10.0.0.2
 port=1024
 fault=true
-distribution=beta
-parameters=2,3,0.9
+distribution=uniform
+parameters=0,1,0.5
