@@ -311,8 +311,8 @@ Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
         {
             if (_dist.user_pick(_dist_type) )
             {
-                param1[rand()%(param1.length()-1)] = modification[rand()%(sizeof(modification)-1)];
-                param2[rand()%(param2.length()-1)] = modification[rand()%(sizeof(modification)-1)];
+                param1[rand()%(param1.length()-1)] = modification[rand()%10];
+                param2[rand()%(param2.length()-1)] = modification[rand()%10];
             }      
         }
     }
