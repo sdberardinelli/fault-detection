@@ -88,6 +88,7 @@ class Server
         int                               _timeout;
         int                               _trials;
         std::string                       _experiement;
+        int                               _clients;
         
         int                               _total_job_count;
         int                               _quorum_incorrect_count;

@@ -114,6 +114,10 @@ Server::Server ( boost::asio::io_service& io,
             boost::algorithm::split(strs,str,boost::is_any_of("="));
             _experiement = strs[1] + ".csv";
             
+            getline(file_in, str);
+            boost::algorithm::split(strs,str,boost::is_any_of("="));
+            _clients = atoi(strs[1].c_str());            
+            
             _log = new Logger(true,false);
         }
         catch(const boost::filesystem::ifstream::failure & ex)

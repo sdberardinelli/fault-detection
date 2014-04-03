@@ -16,6 +16,7 @@
 #include <vector>
 #include <fstream>
 #include <ctime>
+#include <boost/filesystem.hpp>
 #ifdef WIN32
     #include <direct.h>
 #else
@@ -131,27 +132,9 @@ void Logger::disable_logging ( void )
 ********************************************************************************/
 void Logger::log ( string directory, string filename, string msg )
 {
-    string tmp = "log/"+directory;
 
-#ifdef WIN32
-    _mkdir(tmp.c_str());
-#else
-#endif
-
-    tmp += "/"+filename;
-            
     ofstream myfile;
-    myfile.open (tmp.c_str(), ios::out | ios::app);
-    if (timestamp)
-    {
-        time_t rawtime;
-        struct tm * timeinfo;
-        time ( &rawtime );
-        char buffer [30];
-        timeinfo = localtime ( &rawtime );
-        strftime (buffer,30,"%Y/%m/%d, %H:%M:%S",timeinfo);
-        myfile << buffer << " : ";
-    }
+    myfile.open (filename.c_str(), ios::out | ios::app);
     myfile << msg << endl;
     myfile.close();
 }

@@ -89,11 +89,11 @@ void Server::run ( void )
     bool server_check;
     ostringstream ostream_string;
     
-//    do
-//    {
-//        cin >> in;
-//        cout << "connected clients: " << _mp.participant_count() << endl;
-//    }while ( in != 's' );
+    do
+    {
+        cout << "connected clients: " << _mp.participant_count() << endl;
+        this_thread::sleep_for (chrono::microseconds(250));
+    }while ( _mp.participant_count() < _clients );
     
     
     for ( int trials = 0; trials < _trials; trials++ )
@@ -203,6 +203,7 @@ Begin:
             {
                 _quorum_disagree_count++;
                 cout << "quorum did not agree" << endl;
+                server_check = false;
             }
 
             if (!_running)
@@ -221,9 +222,12 @@ Begin:
                        << _quorum_agree_count << ","
                        << _quorum_disagree_count << ","
                        << _quorum_correct_count;
+        
         cout << "result: " << ostream_string.str() << endl;
         cout << endl << endl;
         _log->log("output", _experiement, ostream_string.str());
+        
+        ostream_string.str("");
     }
 }
 /*******************************************************************************
@@ -303,7 +307,7 @@ void Server::send_jobs ( string _message )
     vector<int> indecies;
     bool got_jobs = false;
   
-    cout << "sending jobs: ";
+    //cout << "sending jobs: ";
     
     do
     {
@@ -330,10 +334,10 @@ void Server::send_jobs ( string _message )
     for ( vector<int>::size_type i = 0; i < indecies.size(); i++ )
     {
         _total_job_count++;
-        cout << indecies[i] << ",";
+        //cout << indecies[i] << ",";
         _mp.deliver(_message, indecies[i]);
     }
-    cout << "(" << _total_job_count << ")" << endl;
+    //cout << "(" << _total_job_count << ")" << endl;
 }
 /*******************************************************************************
 * Function     : 
