@@ -1,0 +1,35 @@
+#!/bin/bash
+
+count=$1
+i=0
+let "i = $(ps aux | grep -o client | wc -l) - 3"
+
+if [[ $i -eq $count ]]; then
+	let "i = $count"
+fi
+
+if [[ $i -gt $count ]]; then
+	let "i = 0"
+	pkill -f client
+fi
+
+
+while [[ $i -lt $count ]]; do
+	echo "Starting Client $i"
+	/home/user/client &
+	let i=i+1
+	sleep 0.25
+done
+
+while [[ 0 -lt 1 ]]; do
+
+	let "i = $(ps aux | grep -o client | wc -l) - 3"
+	echo "Clients Running: $i"
+
+	if [[ $i -lt $count ]]; then
+		echo "Starting Client"
+		/home/user/client &
+	fi
+
+	sleep 5
+done
