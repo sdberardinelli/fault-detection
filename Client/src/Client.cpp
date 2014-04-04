@@ -238,7 +238,15 @@ void Client::do_read_body ( void )
                                        boost::algorithm::split(strs,str,boost::is_any_of(","));
                                        msg = process_message(ToEnum(strs[0].c_str()),strs);
                                        write(msg);
-                                   }                
+                                       
+                                       /* CLEAN UP */
+                                       _read_msg.body_length(0);
+                                       memset(_read_msg.data(),0,Message::header_length+Message::max_body_length);
+                                       msg.body_length(0);
+                                       memset(msg.data(),0,Message::header_length+Message::max_body_length);
+                                       str.clear();
+                                       strs.clear();
+                                   }               
                                    
                                    do_read_header();
                                }
@@ -311,9 +319,9 @@ Message Client::process_message ( TEST_FUNCTIONS CMD, vector<string>& strs )
         {
             if (_dist.user_pick(_dist_type) )
             {
-                param1[rand()%(param1.length()-1)] = modification[rand()%10];
-                param2[rand()%(param2.length()-1)] = modification[rand()%10];
-            }      
+                param1[(param1.length()>1?(rand()%param1.length()-1):0)] = modification[rand()%(sizeof(modification)-1)];
+                param2[(param2.length()>1?(rand()%param2.length()-1):0)] = modification[rand()%(sizeof(modification)-1)];
+            }
         }
     }
         
