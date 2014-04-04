@@ -42,7 +42,8 @@ experiment=(n) name/index of the experiement
 
 output (for each trial)
 -------------
-1. # of jobs sent out.
+1. # of clients connected.
+2. # of jobs sent out.
 2. # of incorrect answers accepted.
 3. # of times server checked the answer
 4. # of times the quorum agreed
