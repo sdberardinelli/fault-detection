@@ -18,6 +18,7 @@
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
                    projectFiles="true">
+      <itemPath>1.csv</itemPath>
       <itemPath>config</itemPath>
     </logicalFolder>
     <logicalFolder name="SourceFiles"
@@ -65,6 +66,8 @@
           <commandLine>-lboost_system -lboost_thread</commandLine>
         </linkerTool>
       </compileType>
+      <item path="1.csv" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="config" ex="false" tool="3" flavor2="0">
       </item>
       <item path="hdr/Connection.hpp" ex="false" tool="3" flavor2="0">
@@ -126,6 +129,8 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="1.csv" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="config" ex="false" tool="3" flavor2="0">
       </item>
       <item path="hdr/Connection.hpp" ex="false" tool="3" flavor2="0">

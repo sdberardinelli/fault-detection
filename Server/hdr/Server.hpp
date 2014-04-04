@@ -89,11 +89,13 @@ class Server
         int                               _trials;
         std::string                       _experiement;
         int                               _clients;
-        
-        int                               _total_job_count;
+       
+        int                               _total_job_count;         
         int                               _quorum_incorrect_count;
-        int                               _server_check_count;  
+        int                               _server_quorum_incorrect;
+        int                               _server_quorum_correct;
         
+        int                               _total_msg_count;               
         int                               _quorum_agree_count;
         int                               _quorum_disagree_count;
         int                               _quorum_correct_count;      

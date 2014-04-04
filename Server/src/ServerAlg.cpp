@@ -87,21 +87,28 @@ void Server::run ( void )
     int timeout;
     bool quorum_agree;
     bool server_check;
+    int init_client_count = 0;
     ostringstream ostream_string;
     
     do
     {
-        cout << "connected clients: " << _mp.participant_count() << endl;
-        this_thread::sleep_for (chrono::microseconds(250));
+        
+        if ( init_client_count < _mp.participant_count() )
+        {
+             cout << "connected clients: " << _mp.participant_count() << endl;
+            init_client_count = _mp.participant_count();
+        }
     }while ( _mp.participant_count() < _clients );
     
     
-    for ( int trials = 0; trials < _trials; trials++ )
+    for ( int trial = 0; trial < _trials; trial++ )
     {
-        cout << "starting trial " << trials << endl;
+        cout << "starting trial " << trial << endl;
+        _total_msg_count        = 0;
         _total_job_count        = 0;
         _quorum_incorrect_count = 0;
-        _server_check_count     = 0;
+        _server_quorum_incorrect= 0;
+        _server_quorum_correct  = 0;
         _quorum_agree_count     = 0;
         _quorum_disagree_count  = 0;
         _quorum_correct_count   = 0;        
@@ -131,12 +138,14 @@ Begin:
             in = (rand()%3) + TestFunctions::DO_ADD; /* randomly pick a command   */
             message = construct_job(in);             /* construct message for job */   
             send_jobs(message);                      /* send job to n clients     */
+            
+            _total_job_count++;
 
             timeout = 0;
 
             do                                       /* wait until msgs are rcvd  */
             {
-                this_thread::sleep_for (chrono::seconds(1));
+                this_thread::sleep_for (chrono::milliseconds(500));
 
                 if ( _mp.participant_count() == 0 )
                     continue;
@@ -167,7 +176,6 @@ Begin:
                 
                 if (  _dist.user_pick(_dist_type) ) /* server check */
                 {
-                    _server_check_count++;
                     cout << "server checking: ";
                     
                     vector<string> strs;
@@ -177,10 +185,12 @@ Begin:
                     {
                        server_check = false;
                        cout << " quorum was incorrect" << endl;
+                       _server_quorum_incorrect++;
                     }
                     else
                     {
                         cout << " quorum was correct" << endl;
+                        _server_quorum_correct++;
                     }
                 }
 
@@ -197,6 +207,18 @@ Begin:
                 {
                     _quorum_incorrect_count++;
                     cout << "quorum was incorrect" << endl;
+                    ostream_string << trial << ","
+                                   << _mp.participant_count() << ","
+                                   << _total_job_count << ","
+                                   << _server_quorum_correct << ","
+                                   << _quorum_incorrect_count << ","
+                                   << _server_quorum_incorrect << ","
+                                   << _quorum_disagree_count << ","                    
+                                   << _total_msg_count << ","
+                                   << _quorum_agree_count << ","
+                                   << _quorum_correct_count; 
+                    _log->log("output", _experiement, ostream_string.str());   
+                    ostream_string.str("");                    
                 }
             }
             else
@@ -210,17 +232,32 @@ Begin:
             {
                 return;
             }
+            
+            cout << trial << ","
+                 << _mp.participant_count() << ","
+                 << _total_job_count << ","
+                 << _server_quorum_correct << ","
+                 << _quorum_incorrect_count << ","
+                 << _server_quorum_incorrect << ","
+                 << _quorum_disagree_count << ","                    
+                 << _total_msg_count << ","
+                 << _quorum_agree_count << ","
+                 << _quorum_correct_count << endl;
+        
         }while(server_check);
         
-        cout << "end of trial " << trials << endl;
+        cout << "end of trial " << trial << endl;
         
         
-	ostream_string << _mp.participant_count() << ","
+	ostream_string << trial << ","
+                       << _mp.participant_count() << ","
                        << _total_job_count << ","
+                       << _server_quorum_correct << ","
                        << _quorum_incorrect_count << ","
-                       << _server_check_count << ","
+                       << _server_quorum_incorrect << ","
+                       << _quorum_disagree_count << ","                    
+                       << _total_msg_count << ","
                        << _quorum_agree_count << ","
-                       << _quorum_disagree_count << ","
                        << _quorum_correct_count;
         
         cout << "result: " << ostream_string.str() << endl;
@@ -306,9 +343,7 @@ void Server::send_jobs ( string _message )
 {
     vector<int> indecies;
     bool got_jobs = false;
-  
-    //cout << "sending jobs: ";
-    
+      
     do
     {
         for ( vector<int>::size_type i = 0; i < _mp.participant_count(); i++ )
@@ -333,11 +368,9 @@ void Server::send_jobs ( string _message )
     
     for ( vector<int>::size_type i = 0; i < indecies.size(); i++ )
     {
-        _total_job_count++;
-        //cout << indecies[i] << ",";
+        _total_msg_count++;
         _mp.deliver(_message, indecies[i]);
     }
-    //cout << "(" << _total_job_count << ")" << endl;
 }
 /*******************************************************************************
 * Function     : 
