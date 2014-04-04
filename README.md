@@ -42,10 +42,13 @@ experiment=(n) name/index of the experiement
 
 output (for each trial)
 -------------
-1. # of clients connected.
-2. # of jobs sent out.
-2. # of incorrect answers accepted.
-3. # of times server checked the answer
-4. # of times the quorum agreed
-5. # of times the quorum disagreed
-6. # of times the quorum was correct
+1. trail
+2. # of clients connected.
+3. # of jobs sent out.
+4. # of times quorum is correct when server checks
+5. # of times quorum is incorrect
+6. # of times quorum is incorrect when server checks
+7. # of times quorum disagrees
+8. # of total messages sent
+9. # of times quorum agrees
+10. # of times quorum is corret
