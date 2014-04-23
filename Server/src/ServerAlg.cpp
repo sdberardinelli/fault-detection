@@ -225,7 +225,6 @@ Begin:
             {
                 _quorum_disagree_count++;
                 cout << "quorum did not agree" << endl;
-                server_check = false;
             }
 
             if (!_running)
